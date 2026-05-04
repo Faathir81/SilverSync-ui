@@ -16,11 +16,11 @@ SilverSync Mobile is the frontend client built with Flutter. It serves as an off
 
 ## 🛠️ Tech Stack
 
-* **Framework:** Flutter (Dart)
-* **State Management:** Riverpod / Provider (TBD)
-* **Audio Engine:** `just_audio` (for background playback & playlist management)
-* **Networking:** `dio` or `http`
-* **Local Storage:** `path_provider` & `shared_preferences` / `sqflite`
+- **Framework:** Flutter (Dart)
+- **State Management:** Riverpod / Provider (TBD)
+- **Audio Engine:** `just_audio` (for background playback & playlist management)
+- **Networking:** `dio` or `http`
+- **Local Storage:** `path_provider` & `shared_preferences` / `sqflite`
 
 ---
 
@@ -29,28 +29,33 @@ SilverSync Mobile is the frontend client built with Flutter. It serves as an off
 This roadmap focuses purely on technical implementation, system architecture, and performance optimization.
 
 ### Phase 1: Project Setup & Technical Layouts ⏳ (In Progress)
+
 - [ ] Initialize Flutter project and organize folder structure (e.g., features, core, shared components).
 - [ ] Implement base routing and navigation scheme.
 - [ ] Translate structured technical layouts (generated via Figma AI) into reusable Flutter widgets.
 - [ ] Setup State Management boilerplate.
 
 ### Phase 2: Local Storage & File Management 📝 (Planned)
+
 - [ ] Implement `path_provider` to locate the secure application documents directory.
 - [ ] Create a `DownloadManager` service to handle downloading files from Google Drive URLs to the local directory.
 - [ ] Handle OS-level storage permissions (Android/iOS) using `permission_handler`.
 
 ### Phase 3: API Integration 📝 (Planned)
+
 - [ ] Build HTTP client service using `dio` to communicate with the `SilverSync-API`.
 - [ ] Implement endpoints: Send Sync request, Fetch available tracks, and check Sync status.
 - [ ] Create data models/entities for parsing JSON responses.
 
 ### Phase 4: Audio Player Engine Integration 📝 (Planned)
+
 - [ ] Integrate `just_audio` for local file playback.
 - [ ] Implement playlist queueing, play/pause, next/previous logic.
 - [ ] Setup background audio execution so music plays when the screen is locked or the app is minimized.
 - [ ] Bind the audio player state to the UI progress bars and controls.
 
 ### Phase 5: Memory & Performance Optimization 📝 (Planned)
+
 - [ ] Implement `ListView.builder` (Lazy Loading) for rendering large tracklists efficiently without memory leaks.
 - [ ] Develop an LRU (Least Recently Used) Cache mechanism: automatically delete the oldest `.mp3` files when the app's local storage exceeds a predefined threshold (e.g., 2GB).
 - [ ] Optimize state rebuilds to ensure UI components only update when their specific state changes.
@@ -60,11 +65,13 @@ This roadmap focuses purely on technical implementation, system architecture, an
 ## ⚙️ Prerequisites
 
 To run this project locally, you need to install:
+
 1. **Flutter SDK**
 2. **Android Studio** (for Android Emulator) or **Xcode** (for iOS Simulator)
 3. **VS Code** or another preferred IDE
 
 ## 🚀 How to Run (Local Development)
+
 ```bash
 # Clone the repository
 git clone [https://github.com/yourusername/silversync-mobile.git](https://github.com/yourusername/silversync-mobile.git)
@@ -77,3 +84,4 @@ flutter pub get
 
 # Run the app (ensure an emulator or physical device is connected)
 flutter run
+```
