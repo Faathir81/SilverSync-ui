@@ -30,10 +30,10 @@ This roadmap focuses purely on technical implementation, system architecture, an
 
 ### Phase 1: Project Setup & Technical Layouts ⏳ (In Progress)
 
-- [ ] Initialize Flutter project and organize folder structure (e.g., features, core, shared components).
-- [ ] Implement base routing and navigation scheme.
-- [ ] Translate structured technical layouts (generated via Figma AI) into reusable Flutter widgets.
-- [ ] Setup State Management boilerplate.
+- [x] Initialize Flutter project and organize folder structure (e.g., features, core, shared components).
+- [x] Implement base routing and navigation scheme.
+- [x] Translate structured technical layouts (generated via Figma AI) into reusable Flutter widgets.
+- [x] Setup State Management boilerplate.
 
 ### Phase 2: Local Storage & File Management 📝 (Planned)
 
@@ -43,9 +43,9 @@ This roadmap focuses purely on technical implementation, system architecture, an
 
 ### Phase 3: API Integration 📝 (Planned)
 
-- [ ] Build HTTP client service using `dio` to communicate with the `SilverSync-API`.
-- [ ] Implement endpoints: Send Sync request, Fetch available tracks, and check Sync status.
-- [ ] Create data models/entities for parsing JSON responses.
+- [x] Build HTTP client service using `dio` to communicate with the `SilverSync-API`.
+- [x] Implement endpoints: Send Sync request, Fetch available tracks, and check Sync status.
+- [x] Create data models/entities for parsing JSON responses.
 
 ### Phase 4: Audio Player Engine Integration 📝 (Planned)
 
