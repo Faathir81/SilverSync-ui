@@ -17,7 +17,7 @@ final tracksProvider = FutureProvider<List<TrackModel>>((ref) async {
 });
 
 // Toggle favorite and refresh track list
-Future<void> toggleFavorite(ApiService api, WidgetRef ref, int trackId) async {
-  await api.toggleFavorite(trackId.toString());
+Future<void> toggleFavorite(ApiService api, WidgetRef ref, int trackId, {required bool newValue}) async {
+  await api.toggleFavorite(trackId.toString(), isFavorite: newValue);
   ref.invalidate(tracksProvider); // re-fetch after toggle
 }

@@ -16,52 +16,71 @@ class DashboardPage extends ConsumerWidget {
     final quotaAsync = ref.watch(quotaProvider);
     final authAsync = ref.watch(authStatusProvider);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 60, 20, 100),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(),
-          const SizedBox(height: 30),
-          _buildModuleHeader('HOME // MODULE'),
-          const SizedBox(height: 20),
-          quotaAsync.when(
-            data: (quota) => _buildStorageCard(quota),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (_, __) => _buildOfflineStorageCard(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ═══════════════ STICKY HEADER ═══════════════
+        Container(
+          color: AppColors.background,
+          padding: const EdgeInsets.fromLTRB(20, 60, 20, 15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 25),
+              _buildModuleHeader('HOME // MODULE'),
+            ],
           ),
-          const SizedBox(height: 25),
-          _buildSectionHeader('AUTH NODES'),
-          const SizedBox(height: 15),
-          authAsync.when(
-            data: (auth) => Column(
+        ),
+        Container(height: 1, color: AppColors.primaryTeal.withOpacity(0.15)),
+
+        // ═══════════════ SCROLLABLE CONTENT ═══════════════
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 150),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildAuthNode('Spotify', auth.isSpotifyOnline ? 'OAuth 2.0 - Token Active' : 'Offline / No Token', FontAwesomeIcons.spotify, auth.isSpotifyOnline),
-                const SizedBox(height: 12),
-                _buildAuthNode('Google Drive', auth.isGoogleOnline ? 'Drive API v3 - Scopes OK' : 'Offline / No Scopes', FontAwesomeIcons.googleDrive, auth.isGoogleOnline),
+                quotaAsync.when(
+                  data: (quota) => _buildStorageCard(quota),
+                  loading: () => const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryTeal))),
+                  error: (_, __) => _buildOfflineStorageCard(ref),
+                ),
+                const SizedBox(height: 25),
+                _buildSectionHeader('AUTH NODES'),
+                const SizedBox(height: 15),
+                authAsync.when(
+                  data: (auth) => Column(
+                    children: [
+                      _buildAuthNode('Spotify', auth.isSpotifyOnline ? 'OAuth 2.0 - Token Active' : 'Offline / No Token', FontAwesomeIcons.spotify, auth.isSpotifyOnline),
+                      const SizedBox(height: 12),
+                      _buildAuthNode('Google Drive', auth.isGoogleOnline ? 'Drive API v3 - Scopes OK' : 'Offline / No Scopes', FontAwesomeIcons.googleDrive, auth.isGoogleOnline),
+                    ],
+                  ),
+                  loading: () => const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryTeal))),
+                  error: (_, __) => Column(
+                    children: [
+                      _buildAuthNode('Spotify', 'Connection Failed', FontAwesomeIcons.spotify, false),
+                      const SizedBox(height: 12),
+                      _buildAuthNode('Google Drive', 'Connection Failed', FontAwesomeIcons.googleDrive, false),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 25),
+                authAsync.when(
+                  data: (auth) => _buildSystemStatus(isApiOnline: true),
+                  loading: () => _buildSystemStatus(isApiOnline: false),
+                  error: (_, __) => _buildSystemStatus(isApiOnline: false),
+                ),
               ],
             ),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (_, __) => Column(
-              children: [
-                _buildAuthNode('Spotify', 'Connection Failed', FontAwesomeIcons.spotify, false),
-                const SizedBox(height: 12),
-                _buildAuthNode('Google Drive', 'Connection Failed', FontAwesomeIcons.googleDrive, false),
-              ],
-            ),
           ),
-          const SizedBox(height: 25),
-          authAsync.when(
-            data: (auth) => _buildSystemStatus(isApiOnline: true),
-            loading: () => _buildSystemStatus(isApiOnline: false),
-            error: (_, __) => _buildSystemStatus(isApiOnline: false),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildOfflineStorageCard() {
+  Widget _buildOfflineStorageCard(WidgetRef ref) {
     return AngularContainer(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -70,9 +89,38 @@ class DashboardPage extends ConsumerWidget {
         children: [
           Icon(Icons.cloud_off, size: 40, color: Colors.redAccent.withOpacity(0.8)),
           const SizedBox(height: 15),
-          Text('API DISCONNECTED', style: AppTheme.monoStyle(fontSize: 16, color: Colors.redAccent, letterSpacing: 2)),
+          Text('API DISCONNECTED',
+              style: AppTheme.monoStyle(fontSize: 16, color: Colors.redAccent, letterSpacing: 2)),
           const SizedBox(height: 5),
-          Text('Unable to fetch storage quota', style: AppTheme.monoStyle(fontSize: 10, color: AppColors.textMuted)),
+          Text('Unable to fetch storage quota',
+              style: AppTheme.monoStyle(fontSize: 10, color: AppColors.textMuted)),
+          const SizedBox(height: 16),
+          // Retry button — triggers manual reconnect
+          GestureDetector(
+            onTap: () => ref.read(quotaProvider.notifier).refresh(),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.primaryTeal.withOpacity(0.4)),
+                color: AppColors.primaryTeal.withOpacity(0.06),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.refresh, size: 14, color: AppColors.primaryTeal.withOpacity(0.8)),
+                  const SizedBox(width: 6),
+                  Text('RETRY CONNECTION',
+                      style: AppTheme.monoStyle(
+                          fontSize: 10,
+                          color: AppColors.primaryTeal.withOpacity(0.8),
+                          letterSpacing: 1.5)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text('Auto-retrying every 5s...',
+              style: AppTheme.monoStyle(fontSize: 9, color: AppColors.textMuted.withOpacity(0.4))),
         ],
       ),
     );
@@ -171,7 +219,6 @@ class DashboardPage extends ConsumerWidget {
           const SizedBox(height: 20),
           Row(
             children: [
-              // Gauge
               Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -196,9 +243,13 @@ class DashboardPage extends ConsumerWidget {
                     Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(quota.used.split(' ')[0], style: AppTheme.monoStyle(fontSize: 22, color: AppColors.primaryTeal, fontWeight: FontWeight.bold).copyWith(
-                          shadows: [Shadow(color: AppColors.primaryTeal, blurRadius: 10)],
-                        )),
+                        // Show full value + unit (e.g. "12.67 GB")
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(quota.usedShort, style: AppTheme.monoStyle(fontSize: 20, color: AppColors.primaryTeal, fontWeight: FontWeight.bold).copyWith(
+                            shadows: [Shadow(color: AppColors.primaryTeal, blurRadius: 10)],
+                          )),
+                        ),
                         Text('OF ${quota.capacity}', style: AppTheme.monoStyle(fontSize: 8, color: AppColors.textMuted)),
                         const SizedBox(height: 2),
                         Text('${quota.usedPercentage.toStringAsFixed(1)}% USED', style: AppTheme.monoStyle(fontSize: 8, color: AppColors.primaryMagenta).copyWith(
@@ -215,7 +266,8 @@ class DashboardPage extends ConsumerWidget {
                   children: [
                     _buildQuotaInfo('CAPACITY', quota.capacity, AppColors.primaryTeal),
                     const SizedBox(height: 10),
-                    _buildQuotaInfo('SILVERSYNC', quota.silversyncUsed, AppColors.primaryMagenta),
+                    // silversyncUsed now shows real folder size from backend
+                    _buildQuotaInfo('LIBRARY SIZE', quota.silversyncUsed, AppColors.primaryMagenta),
                     const SizedBox(height: 10),
                     _buildQuotaInfo('FREE', quota.free, AppColors.primaryTeal),
                   ],
@@ -226,11 +278,7 @@ class DashboardPage extends ConsumerWidget {
           const SizedBox(height: 20),
           Stack(
             children: [
-              Container(
-                height: 4,
-                width: double.infinity,
-                color: Colors.white10,
-              ),
+              Container(height: 4, width: double.infinity, color: Colors.white10),
               LayoutBuilder(
                 builder: (context, constraints) {
                   return Container(
@@ -350,7 +398,10 @@ class DashboardPage extends ConsumerWidget {
           children: [
             Icon(Icons.play_arrow, size: 12, color: color),
             const SizedBox(width: 4),
-            Text(status, style: AppTheme.monoStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold)),
+            SizedBox(
+              width: 75,
+              child: Text(status, style: AppTheme.monoStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold)),
+            ),
           ],
         ),
       ],

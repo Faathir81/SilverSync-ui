@@ -14,130 +14,103 @@ class SetsPage extends ConsumerWidget {
     final playlistsAsync = ref.watch(playlistsProvider);
     final quotaAsync = ref.watch(quotaProvider);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 60, 20, 100),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(),
-          const SizedBox(height: 30),
-          playlistsAsync.when(
-            data: (playlists) => _buildContent(playlists, quotaAsync),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, stack) => _buildContentWithError(err.toString(), quotaAsync),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('SYS // ACTIVE', style: AppTheme.monoStyle(fontSize: 12, color: AppColors.primaryTeal.withOpacity(0.7))),
-        const SizedBox(height: 4),
-        Text('SILVERSYNC', style: AppTheme.darkTheme.textTheme.displayLarge),
-      ],
-    );
-  }
-
-  Widget _buildContent(List playlists, AsyncValue quotaAsync) {
-    String gbUsed = quotaAsync.maybeWhen(
-      data: (q) => q.silversyncUsed.replaceAll(RegExp(r'[a-zA-Z\s]'), ''), // strip " GB" or " MB"
-      orElse: () => '0.00',
+    // Compute stats for sticky header
+    int collectionsCount = playlistsAsync.maybeWhen(data: (p) => p.length, orElse: () => 0);
+    int totalTracks = playlistsAsync.maybeWhen(data: (p) => p.fold<int>(0, (sum, pl) => sum + (pl.trackCount as int)), orElse: () => 0);
+    // Use full formatted string (e.g. "170.2 MB") — no stripping
+    String libraryUsed = quotaAsync.maybeWhen(
+      data: (q) => q.silversyncUsed,
+      orElse: () => '— MB',
     );
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('COLLECTIONS // DRIVE FOLDERS', style: AppTheme.monoStyle(fontSize: 10, color: AppColors.primaryTeal.withOpacity(0.4), letterSpacing: 2)),
-                const SizedBox(height: 4),
-                Text('Playlists', style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(fontSize: 18)),
-              ],
-            ),
-            AngularContainer(
-              cutSize: 6,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: Row(
+        // ═══════════════ STICKY HEADER ═══════════════
+        Container(
+          color: AppColors.background,
+          padding: const EdgeInsets.fromLTRB(20, 60, 20, 15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Title
+              Text('SYS // ACTIVE', style: AppTheme.monoStyle(fontSize: 12, color: AppColors.primaryTeal.withOpacity(0.7))),
+              const SizedBox(height: 4),
+              Text('SILVERSYNC', style: AppTheme.darkTheme.textTheme.displayLarge),
+              const SizedBox(height: 25),
+
+              // Subtitle + NEW COLLECTION button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Icon(Icons.add, size: 14, color: AppColors.primaryTeal),
-                  const SizedBox(width: 6),
-                  Text('NEW COLLECTION', style: AppTheme.monoStyle(fontSize: 10, color: AppColors.primaryTeal)),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('COLLECTIONS // DRIVE FOLDERS', style: AppTheme.monoStyle(fontSize: 10, color: AppColors.primaryTeal.withOpacity(0.4), letterSpacing: 2)),
+                      const SizedBox(height: 4),
+                      Text('Playlists', style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(fontSize: 18)),
+                    ],
+                  ),
+                  AngularContainer(
+                    cutSize: 6,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.add, size: 14, color: AppColors.primaryTeal),
+                        const SizedBox(width: 6),
+                        Text('NEW COLLECTION', style: AppTheme.monoStyle(fontSize: 10, color: AppColors.primaryTeal)),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 15),
+
+              // Stats bar
+              _buildStatsBar(collectionsCount, totalTracks, libraryUsed),
+            ],
+          ),
         ),
-        const SizedBox(height: 20),
-        _buildStatsBar(playlists.length, playlists.fold<int>(0, (sum, p) => sum + (p.trackCount as int)), gbUsed),
-        const SizedBox(height: 20),
-        playlists.isEmpty
-            ? Padding(
-                padding: const EdgeInsets.symmetric(vertical: 40),
-                child: Center(
+        Container(height: 1, color: AppColors.primaryTeal.withOpacity(0.15)),
+
+        // ═══════════════ SCROLLABLE CONTENT ═══════════════
+        Expanded(
+          child: playlistsAsync.when(
+            data: (playlists) {
+              if (playlists.isEmpty) {
+                return Center(
                   child: Text('NO COLLECTIONS FOUND', style: AppTheme.monoStyle(fontSize: 12, color: AppColors.primaryTeal.withOpacity(0.3), letterSpacing: 2)),
-                ),
-              )
-            : ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
+                );
+              }
+              return ListView.builder(
+                padding: const EdgeInsets.fromLTRB(20, 15, 20, 150),
                 itemCount: playlists.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
-                itemBuilder: (context, index) => _buildPlaylistItem(playlists[index]),
-              ),
-      ],
-    );
-  }
-
-  Widget _buildContentWithError(String error, AsyncValue quotaAsync) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('COLLECTIONS // DRIVE FOLDERS', style: AppTheme.monoStyle(fontSize: 10, color: AppColors.primaryTeal.withOpacity(0.4), letterSpacing: 2)),
-                const SizedBox(height: 4),
-                Text('Playlists', style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(fontSize: 18)),
-              ],
-            ),
-            AngularContainer(
-              cutSize: 5,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              child: Row(
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildPlaylistItem(playlists[index]),
+                  );
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryTeal))),
+            error: (err, _) => Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.warning, size: 12, color: Colors.redAccent),
-                  const SizedBox(width: 6),
-                  Text('OFFLINE', style: AppTheme.monoStyle(fontSize: 10, color: Colors.redAccent)),
+                  Icon(Icons.cloud_off, size: 40, color: Colors.redAccent.withOpacity(0.4)),
+                  const SizedBox(height: 15),
+                  Text('DATABASE UNREACHABLE', style: AppTheme.monoStyle(fontSize: 12, color: Colors.redAccent.withOpacity(0.5), letterSpacing: 2)),
                 ],
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        _buildStatsBar(0, 0, '0.00'),
-        const SizedBox(height: 20),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 40),
-          child: Center(
-            child: Text('DATABASE UNREACHABLE', style: AppTheme.monoStyle(fontSize: 12, color: Colors.redAccent.withOpacity(0.5), letterSpacing: 2)),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildStatsBar(int collectionsCount, int totalTracks, String gbUsed) {
+  Widget _buildStatsBar(int collectionsCount, int totalTracks, String libraryUsed) {
     return AngularContainer(
       cutSize: 8,
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -148,7 +121,8 @@ class SetsPage extends ConsumerWidget {
           Container(width: 1, height: 32, color: AppColors.primaryTeal.withOpacity(0.15)),
           _buildStatItem(totalTracks.toString(), 'TOTAL TRACKS', AppColors.primaryMagenta),
           Container(width: 1, height: 32, color: AppColors.primaryTeal.withOpacity(0.15)),
-          _buildStatItem(gbUsed, 'GB USED', AppColors.textMain),
+          // Show full string e.g. "170.2 MB" with dynamic unit
+          _buildStatItem(libraryUsed, 'LIBRARY', AppColors.textMain),
         ],
       ),
     );

@@ -85,39 +85,49 @@ class _SyncPageState extends ConsumerState<SyncPage> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 60, 20, 100),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(),
-          const SizedBox(height: 30),
-          _buildModuleHeader('SYNC // MODULE'),
-          const SizedBox(height: 20),
-          _buildSyncInputCard(),
-          if (_errorMsg != null) ...[
-            const SizedBox(height: 10),
-            _buildErrorBanner(_errorMsg!),
-          ],
-          const SizedBox(height: 30),
-          _buildSectionHeader('LIVE ACTIVITY'),
-          const SizedBox(height: 15),
-          if (_currentJob == null)
-            _buildEmptyActivityState()
-          else
-            _buildActivityCard(_currentJob!),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('SYS // ACTIVE', style: AppTheme.monoStyle(fontSize: 12, color: AppColors.primaryTeal.withOpacity(0.7))),
-        const SizedBox(height: 4),
-        Text('SILVERSYNC', style: AppTheme.darkTheme.textTheme.displayLarge),
+        // ═══════════════ STICKY HEADER ═══════════════
+        Container(
+          color: AppColors.background,
+          padding: const EdgeInsets.fromLTRB(20, 60, 20, 15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('SYS // ACTIVE', style: AppTheme.monoStyle(fontSize: 12, color: AppColors.primaryTeal.withOpacity(0.7))),
+              const SizedBox(height: 4),
+              Text('SILVERSYNC', style: AppTheme.darkTheme.textTheme.displayLarge),
+              const SizedBox(height: 25),
+              _buildModuleHeader('SYNC // MODULE'),
+            ],
+          ),
+        ),
+        Container(height: 1, color: AppColors.primaryTeal.withOpacity(0.15)),
+
+        // ═══════════════ SCROLLABLE CONTENT ═══════════════
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 150),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSyncInputCard(),
+                if (_errorMsg != null) ...[
+                  const SizedBox(height: 10),
+                  _buildErrorBanner(_errorMsg!),
+                ],
+                const SizedBox(height: 30),
+                _buildSectionHeader('LIVE ACTIVITY'),
+                const SizedBox(height: 15),
+                if (_currentJob == null)
+                  _buildEmptyActivityState()
+                else
+                  _buildActivityCard(_currentJob!),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }

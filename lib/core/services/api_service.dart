@@ -37,7 +37,8 @@ class ApiService {
 
   // Track Endpoints
   Future<Response> getTracks() => _dio.get('/api/v1/tracks');
-  Future<Response> toggleFavorite(String id) => _dio.patch('/api/v1/tracks/$id/favorite');
+  Future<Response> toggleFavorite(String id, {required bool isFavorite}) =>
+      _dio.patch('/api/v1/tracks/$id/favorite', data: {'is_favorite': isFavorite});
   Future<Response> deleteTrack(String id) => _dio.delete('/api/v1/tracks/$id');
 
   // Playlist Endpoints

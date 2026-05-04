@@ -26,45 +26,51 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
     final quotaAsync = ref.watch(quotaProvider);
     final authAsync = ref.watch(authStatusProvider);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 60, 20, 100),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(),
-          const SizedBox(height: 30),
-          _buildModuleHeader('CONTROL // SYSTEM CONFIG', 'Settings'),
-          const SizedBox(height: 20),
-          _buildSystemModules(authAsync),
-          const SizedBox(height: 20),
-          _buildRuntimeMetrics(quotaAsync),
-          const SizedBox(height: 20),
-          _buildAuthNodes(authAsync),
-          const SizedBox(height: 30),
-          _buildAppSignature(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('SYS // ACTIVE', style: AppTheme.monoStyle(fontSize: 12, color: AppColors.primaryTeal.withOpacity(0.7))),
-        const SizedBox(height: 4),
-        Text('SILVERSYNC', style: AppTheme.darkTheme.textTheme.displayLarge),
-      ],
-    );
-  }
+        // ═══════════════ STICKY HEADER ═══════════════
+        Container(
+          color: AppColors.background,
+          padding: const EdgeInsets.fromLTRB(20, 60, 20, 15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('SYS // ACTIVE', style: AppTheme.monoStyle(fontSize: 12, color: AppColors.primaryTeal.withOpacity(0.7))),
+              const SizedBox(height: 4),
+              Text('SILVERSYNC', style: AppTheme.darkTheme.textTheme.displayLarge),
+              const SizedBox(height: 25),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('CONTROL // SYSTEM CONFIG', style: AppTheme.monoStyle(fontSize: 10, color: AppColors.primaryTeal.withOpacity(0.4), letterSpacing: 2)),
+                  const SizedBox(height: 4),
+                  Text('Settings', style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(fontSize: 18)),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Container(height: 1, color: AppColors.primaryTeal.withOpacity(0.15)),
 
-  Widget _buildModuleHeader(String preTitle, String title) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(preTitle, style: AppTheme.monoStyle(fontSize: 10, color: AppColors.primaryTeal.withOpacity(0.4), letterSpacing: 2)),
-        const SizedBox(height: 4),
-        Text(title, style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(fontSize: 18)),
+        // ═══════════════ SCROLLABLE CONTENT ═══════════════
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 150),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSystemModules(authAsync),
+                const SizedBox(height: 20),
+                _buildRuntimeMetrics(quotaAsync),
+                const SizedBox(height: 20),
+                _buildAuthNodes(authAsync),
+                const SizedBox(height: 30),
+                _buildAppSignature(),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -280,7 +286,7 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
                 children: [
                   Text(name, style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(
                     fontSize: 14,
-                    color: isOnline ? AppColors.textMain : AppColors.textMain,
+                    color: AppColors.textMain,
                   )),
                   Text(
                     isOnline ? 'Connected — Tap to refresh' : 'Not connected — Tap to login',
