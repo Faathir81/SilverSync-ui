@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../../../core/constants/colors.dart';
-import '../../../../core/theme/app_theme.dart';
-import '../../../../core/services/audio_player_service.dart';
-import '../../../../core/widgets/cached_album_art.dart';
-import '../../../../core/widgets/marquee_text.dart';
+import '../constants/colors.dart';
+import '../theme/app_theme.dart';
+import '../services/audio_player_service.dart';
+import 'cached_album_art.dart';
+import 'marquee_text.dart';
 import '../../features/player/presentation/pages/full_player_page.dart';
 
 /// Floating Mini Player shown above the Bottom Navigation bar.
@@ -60,120 +60,107 @@ class MiniPlayerWidget extends ConsumerWidget {
         if ((d.primaryVelocity ?? 0) < -300) player.skipNext();
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 10),
+        margin: EdgeInsets.zero, // Removed margins for full-width
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
           color: const Color(0xFF0E1829),
-          border: Border.all(
-            color: AppColors.primaryTeal.withValues(alpha: 0.25),
-            width: 1,
+          border: Border(
+            top: BorderSide(
+              color: AppColors.primaryTeal.withValues(alpha: 0.2),
+              width: 1,
+            ),
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primaryTeal.withValues(alpha: 0.15),
-              blurRadius: 24,
-              spreadRadius: 0,
-              offset: const Offset(0, -4),
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.5),
-              blurRadius: 16,
+              color: Colors.black.withValues(alpha: 0.4),
+              blurRadius: 12,
+              offset: const Offset(0, -2),
             ),
           ],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _MiniProgressBar(state: state, player: player),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                child: Row(
-                  children: [
-                    // Album art — cached and Hero animated
-                    Hero(
-                      tag: 'albumArt_${state.currentTrack?.id ?? "none"}',
-                      child: CachedAlbumArt(
-                        url: state.currentTrack?.albumArtUrl,
-                        size: 44,
-                        borderRadius: 8,
-                      ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _MiniProgressBar(state: state, player: player),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: Row(
+                children: [
+                  Hero(
+                    tag: 'albumArt_${state.currentTrack?.id ?? "none"}',
+                    child: CachedAlbumArt(
+                      url: state.currentTrack?.albumArtUrl,
+                      size: 44,
+                      borderRadius: 8,
                     ),
-                    const SizedBox(width: 12),
-
-                    // Track info
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          MarqueeText(
-                            text: state.currentTrack?.title ?? 'NO TRACK',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFFD0D8E8),
-                            ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        MarqueeText(
+                          text: state.currentTrack?.title ?? 'NO TRACK',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFD0D8E8),
                           ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              if (state.isLoading) ...[
-                                SizedBox(
-                                  width: 8, height: 8,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 1.5,
-                                    valueColor: AlwaysStoppedAnimation(AppColors.primaryTeal),
-                                  ),
-                                ),
-                                const SizedBox(width: 5),
-                              ],
-                              Flexible(
-                                child: Text(
-                                  state.currentTrack?.artist ?? 'SYSTEM IDLE',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.primaryTeal.withValues(alpha: 0.65),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  maxLines: 1,
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            if (state.isLoading) ...[
+                              SizedBox(
+                                width: 8, height: 8,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 1.5,
+                                  valueColor: AlwaysStoppedAnimation(AppColors.primaryTeal),
                                 ),
                               ),
-                              const SizedBox(width: 6),
-                              Text(
-                                state.positionStr,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontFamily: 'monospace',
-                                  color: AppColors.textMuted.withValues(alpha: 0.4),
-                                ),
-                              ),
+                              const SizedBox(width: 5),
                             ],
-                          ),
-                        ],
-                      ),
+                            Flexible(
+                              child: Text(
+                                state.currentTrack?.artist ?? 'SYSTEM IDLE',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.primaryTeal.withValues(alpha: 0.65),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                maxLines: 1,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              state.positionStr,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontFamily: 'monospace',
+                                color: AppColors.textMuted.withValues(alpha: 0.4),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-
-                    const SizedBox(width: 8),
-
-                    // Controls
-                    _MiniControlButton(
-                      icon: Icons.skip_previous_rounded,
-                      onTap: player.skipPrevious,
-                    ),
-                    const SizedBox(width: 4),
-                    _MiniPlayPauseButton(state: state, player: player),
-                    const SizedBox(width: 4),
-                    _MiniControlButton(
-                      icon: Icons.skip_next_rounded,
-                      onTap: player.skipNext,
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 8),
+                  _MiniControlButton(
+                    icon: Icons.skip_previous_rounded,
+                    onTap: player.skipPrevious,
+                  ),
+                  const SizedBox(width: 4),
+                  _MiniPlayPauseButton(state: state, player: player),
+                  const SizedBox(width: 4),
+                  _MiniControlButton(
+                    icon: Icons.skip_next_rounded,
+                    onTap: player.skipNext,
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -195,6 +182,10 @@ class _MiniProgressBar extends StatelessWidget {
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTapDown: (d) {
+          final p = (d.localPosition.dx / constraints.maxWidth).clamp(0.0, 1.0);
+          player.seekTo(p);
+        },
+        onHorizontalDragUpdate: (d) {
           final p = (d.localPosition.dx / constraints.maxWidth).clamp(0.0, 1.0);
           player.seekTo(p);
         },

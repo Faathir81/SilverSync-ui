@@ -1,12 +1,15 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/constants/colors.dart';
 import 'core/services/audio_player_service.dart';
 import 'core/widgets/matrix_background.dart';
 import 'core/widgets/mini_player_widget.dart';
+import 'core/widgets/app_notification.dart';
 
 import 'features/dashboard/presentation/pages/dashboard_page.dart';
 import 'features/sync/presentation/pages/sync_page.dart';
@@ -14,7 +17,17 @@ import 'features/archive/presentation/pages/archive_page.dart';
 import 'features/sets/presentation/pages/sets_page.dart';
 import 'features/config/presentation/pages/config_page.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  if (!kIsWeb) {
+    await JustAudioBackground.init(
+      androidNotificationChannelId: 'com.ryanheise.audioservice.AudioService',
+      androidNotificationChannelName: 'Audio Playback',
+      androidNotificationOngoing: true,
+    );
+  }
+
   runApp(
     const ProviderScope(
       child: SilverSyncApp(),
@@ -54,12 +67,16 @@ class MainScreen extends ConsumerStatefulWidget {
 class _MainScreenState extends ConsumerState<MainScreen> {
   int _selectedIndex = 0;
 
-  static const List<Widget> _pages = [
-    DashboardPage(),
-    SyncPage(),
-    ArchivePage(),
-    SetsPage(),
-    ConfigPage(),
+  static final List<Widget> _pages = [
+    const DashboardPage(),
+    const SyncPage(),
+    const ArchivePage(),
+    Navigator(
+      onGenerateRoute: (settings) => MaterialPageRoute(
+        builder: (_) => const SetsPage(),
+      ),
+    ),
+    const ConfigPage(),
   ];
 
   @override
@@ -98,23 +115,31 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             ),
           ),
 
-          // ── Bottom Nav (lower z-order) ──────────────────────────
+          // ── Bottom UI Section (Mini Player + Nav Bar) ──────────
           Positioned(
             bottom: 0, left: 0, right: 0,
-            child: _buildBottomNav(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Mini Player with slide animation
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeOutCubic,
+                  height: hasTrack ? 76 : 0, // Height of mini player
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 300),
+                    opacity: hasTrack ? 1 : 0,
+                    child: const MiniPlayerWidget(),
+                  ),
+                ),
+                // Bottom Navigation
+                _buildBottomNav(),
+              ],
+            ),
           ),
 
-          // ── Mini Player (always on top) ─────────────────────────
-          // MiniPlayerWidget handles its own state via Riverpod.
-          // Shell only handles the slide-in/out animation.
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeOutCubic,
-            bottom: hasTrack ? 66 : -90,
-            left: 0,
-            right: 0,
-            child: const MiniPlayerWidget(),
-          ),
+          // ── Global Notifications (always on very top) ───────────
+          AppNotification(bottomOffset: hasTrack ? 76 + 70 : 70),
         ],
       ),
     );

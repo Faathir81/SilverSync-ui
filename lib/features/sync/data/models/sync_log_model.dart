@@ -15,8 +15,8 @@ class SyncLogModel {
 
   factory SyncLogModel.fromJson(Map<String, dynamic> json) {
     return SyncLogModel(
-      id: json['ID'] ?? json['id'] ?? 0,
-      spotifyUrl: json['SpotifyURL'] ?? json['spotify_url'] ?? '',
+      id: json['ID'] ?? json['id'] ?? json['sync_log_id'] ?? 0,
+      spotifyUrl: json['SpotifyURL'] ?? json['spotify_url'] ?? json['url'] ?? '',
       status: json['Status'] ?? json['status'] ?? 'PENDING',
       message: json['Message'] ?? json['message'] ?? '',
       createdAt: DateTime.tryParse(json['CreatedAt'] ?? json['created_at'] ?? '') ?? DateTime.now(),

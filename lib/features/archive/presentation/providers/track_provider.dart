@@ -21,3 +21,9 @@ Future<void> toggleFavorite(ApiService api, WidgetRef ref, int trackId, {require
   await api.toggleFavorite(trackId.toString(), isFavorite: newValue);
   ref.invalidate(tracksProvider); // re-fetch after toggle
 }
+
+// Update track metadata and refresh track list
+Future<void> updateTrackMetadata(ApiService api, WidgetRef ref, int trackId, String newTitle, String newArtist) async {
+  await api.updateTrack(trackId.toString(), newTitle, newArtist);
+  ref.invalidate(tracksProvider); // re-fetch after update
+}

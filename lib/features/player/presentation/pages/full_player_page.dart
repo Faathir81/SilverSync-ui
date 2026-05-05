@@ -4,8 +4,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/audio_player_service.dart';
+import '../../../../core/services/api_service.dart';
 import '../../../../core/widgets/cached_album_art.dart';
 import '../../../../core/widgets/marquee_text.dart';
+import '../../../archive/presentation/providers/track_provider.dart';
 
 class FullPlayerPage extends ConsumerWidget {
   const FullPlayerPage({super.key});
@@ -28,7 +30,7 @@ class FullPlayerPage extends ConsumerWidget {
                   center: Alignment.topCenter,
                   radius: 1.4,
                   colors: [
-                    AppColors.primaryTeal.withOpacity(0.07),
+                    AppColors.primaryTeal.withValues(alpha: 0.07),
                     AppColors.background,
                   ],
                 ),
@@ -42,7 +44,7 @@ class FullPlayerPage extends ConsumerWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [AppColors.primaryMagenta.withOpacity(0.06), Colors.transparent],
+                  colors: [AppColors.primaryMagenta.withValues(alpha: 0.06), Colors.transparent],
                 ),
               ),
             ),
@@ -52,7 +54,7 @@ class FullPlayerPage extends ConsumerWidget {
             child: Column(
               children: [
                 // ── Top Bar ──────────────────────────────────
-                _buildTopBar(context, state, player),
+                _buildTopBar(context, ref, state, player),
 
                 const SizedBox(height: 24),
 
@@ -90,7 +92,7 @@ class FullPlayerPage extends ConsumerWidget {
   }
 
   // ── Top Bar ─────────────────────────────────────────────────────────────────
-  Widget _buildTopBar(BuildContext context, PlayerStateModel state, AudioPlayerNotifier player) {
+  Widget _buildTopBar(BuildContext context, WidgetRef ref, PlayerStateModel state, AudioPlayerNotifier player) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
       child: Row(
@@ -107,7 +109,7 @@ class FullPlayerPage extends ConsumerWidget {
                   'NOW PLAYING',
                   style: AppTheme.monoStyle(
                       fontSize: 9,
-                      color: AppColors.primaryTeal.withOpacity(0.5),
+                      color: AppColors.primaryTeal.withValues(alpha: 0.5),
                       letterSpacing: 3),
                 ),
                 const SizedBox(height: 2),
@@ -115,7 +117,7 @@ class FullPlayerPage extends ConsumerWidget {
                   state.currentTrack?.artist.toUpperCase() ?? '—',
                   style: AppTheme.monoStyle(
                       fontSize: 11,
-                      color: AppColors.textMuted.withOpacity(0.7)),
+                      color: AppColors.textMuted.withValues(alpha: 0.7)),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -128,8 +130,19 @@ class FullPlayerPage extends ConsumerWidget {
                 : Icons.favorite_border,
             color: state.currentTrack?.isFavorite == true
                 ? AppColors.primaryMagenta
-                : AppColors.textMuted.withOpacity(0.4),
-            onTap: () {},
+                : AppColors.textMuted.withValues(alpha: 0.4),
+            onTap: () {
+              if (state.currentTrack != null) {
+                final newValue = !state.currentTrack!.isFavorite;
+                final api = ref.read(apiServiceProvider);
+                
+                // Update immediately for responsive UI
+                player.updateCurrentTrackFavorite(newValue);
+                
+                // Fire API call and refresh archive provider
+                toggleFavorite(api, ref, state.currentTrack!.id, newValue: newValue);
+              }
+            },
           ),
         ],
       ),

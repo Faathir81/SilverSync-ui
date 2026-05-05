@@ -4,10 +4,11 @@ import '../../../../core/constants/colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/angular_container.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../../../core/services/api_service.dart';
 import '../../../dashboard/presentation/providers/quota_provider.dart';
 import '../../../dashboard/presentation/providers/auth_provider.dart';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import '../../../../core/providers/notification_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ConfigPage extends ConsumerStatefulWidget {
   const ConfigPage({super.key});
@@ -56,7 +57,7 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
         // ═══════════════ SCROLLABLE CONTENT ═══════════════
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 150),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 180),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -216,8 +217,16 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
             accentColor: const Color(0xFF1DB954),
             isOnline: spotifyOnline,
             isLoading: isLoading,
-            onConnect: () => _openUrl('http://localhost:8080/auth/login'),
-            onRefresh: () => ref.invalidate(authStatusProvider),
+            onConnect: () => _openUrl('http://192.168.1.13:8080/auth/login'),
+            onRefresh: () {
+              ref.read(notificationProvider.notifier).show('REFRESHING SPOTIFY STATUS...');
+              ref.invalidate(authStatusProvider);
+            },
+            onRevoke: () async {
+              ref.read(notificationProvider.notifier).show('REVOKING SPOTIFY SESSION...');
+              await ref.read(apiServiceProvider).logoutSpotify();
+              ref.invalidate(authStatusProvider);
+            },
           ),
           const SizedBox(height: 10),
           _buildAuthButton(
@@ -226,8 +235,16 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
             accentColor: const Color(0xFF4285F4),
             isOnline: googleOnline,
             isLoading: isLoading,
-            onConnect: () => _openUrl('http://localhost:8080/auth/google/login'),
-            onRefresh: () => ref.invalidate(authStatusProvider),
+            onConnect: () => _openUrl('http://192.168.1.13:8080/auth/google/login'),
+            onRefresh: () {
+              ref.read(notificationProvider.notifier).show('REFRESHING DRIVE STATUS...');
+              ref.invalidate(authStatusProvider);
+            },
+            onRevoke: () async {
+              ref.read(notificationProvider.notifier).show('REVOKING DRIVE SESSION...');
+              await ref.read(apiServiceProvider).logoutGoogle();
+              ref.invalidate(authStatusProvider);
+            },
           ),
         ],
       ),
@@ -235,8 +252,13 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
   }
 
   Future<void> _openUrl(String url) async {
-    // Open in a new tab — Flutter Web native, no plugin needed
-    html.window.open(url, '_blank');
+    ref.read(notificationProvider.notifier).show('OPENING AUTH GATEWAY...');
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      ref.read(notificationProvider.notifier).show('COULD NOT OPEN AUTH URL');
+    }
     // After user likely finishes OAuth, refresh auth status
     await Future.delayed(const Duration(seconds: 5));
     if (mounted) ref.invalidate(authStatusProvider);
@@ -250,6 +272,7 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
     required bool isLoading,
     required VoidCallback onConnect,
     required VoidCallback onRefresh,
+    required VoidCallback onRevoke,
   }) {
     return GestureDetector(
       onTap: isLoading ? null : (isOnline ? onRefresh : onConnect),
@@ -295,31 +318,34 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
                 ],
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: isOnline ? Colors.redAccent.withOpacity(0.08) : AppColors.primaryTeal.withOpacity(0.1),
-                border: Border.all(color: isOnline ? Colors.redAccent.withOpacity(0.3) : AppColors.primaryTeal.withOpacity(0.4)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isOnline ? Icons.link_off : Icons.open_in_browser,
-                    size: 12,
-                    color: isOnline ? Colors.redAccent.withOpacity(0.8) : AppColors.primaryTeal,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    isOnline ? 'REVOKE' : 'CONNECT',
-                    style: AppTheme.monoStyle(
-                      fontSize: 10,
+            GestureDetector(
+              onTap: isLoading ? null : (isOnline ? onRevoke : onConnect),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: isOnline ? Colors.redAccent.withOpacity(0.08) : AppColors.primaryTeal.withOpacity(0.1),
+                  border: Border.all(color: isOnline ? Colors.redAccent.withOpacity(0.3) : AppColors.primaryTeal.withOpacity(0.4)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isOnline ? Icons.link_off : Icons.open_in_browser,
+                      size: 12,
                       color: isOnline ? Colors.redAccent.withOpacity(0.8) : AppColors.primaryTeal,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 6),
+                    Text(
+                      isOnline ? 'REVOKE' : 'CONNECT',
+                      style: AppTheme.monoStyle(
+                        fontSize: 10,
+                        color: isOnline ? Colors.redAccent.withOpacity(0.8) : AppColors.primaryTeal,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

@@ -37,7 +37,7 @@ class DashboardPage extends ConsumerWidget {
         // ═══════════════ SCROLLABLE CONTENT ═══════════════
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 150),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 180),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

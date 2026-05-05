@@ -34,4 +34,29 @@ class TrackModel {
       createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
     );
   }
+
+  TrackModel copyWith({
+    int? id,
+    String? spotifyId,
+    String? title,
+    String? artist,
+    String? driveFileId,
+    String? albumArtUrl,
+    bool? isFavorite,
+    String? quality,
+    DateTime? createdAt,
+  }) {
+    return TrackModel(
+      id: id ?? this.id,
+      spotifyId: spotifyId ?? this.spotifyId,
+      title: title ?? this.title,
+      artist: artist ?? this.artist,
+      driveFileId: driveFileId ?? this.driveFileId,
+      albumArtUrl: albumArtUrl ?? this.albumArtUrl,
+      isFavorite: isFavorite ?? this.isFavorite,
+      quality: quality ?? this.quality,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }
+

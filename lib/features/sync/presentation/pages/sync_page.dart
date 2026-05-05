@@ -1,13 +1,14 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/angular_container.dart';
 import '../../../../core/services/api_service.dart';
-import '../../data/models/sync_log_model.dart';
+import '../../../../core/providers/notification_provider.dart';
 import '../providers/sync_provider.dart';
+import '../providers/watch_provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:intl/intl.dart';
 
 class SyncPage extends ConsumerStatefulWidget {
   const SyncPage({super.key});
@@ -20,13 +21,10 @@ class _SyncPageState extends ConsumerState<SyncPage> {
   final _urlController = TextEditingController();
   bool _isSubmitting = false;
   String? _errorMsg;
-  SyncLogModel? _currentJob;
-  Timer? _pollTimer;
 
   @override
   void dispose() {
     _urlController.dispose();
-    _pollTimer?.cancel();
     super.dispose();
   }
 
@@ -44,18 +42,14 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     setState(() {
       _isSubmitting = true;
       _errorMsg = null;
-      _currentJob = null;
     });
 
     try {
-      final api = ref.read(apiServiceProvider);
-      final job = await initiateSync(api, url);
+      await ref.read(activeSyncJobProvider.notifier).startSync(url);
       setState(() {
-        _currentJob = job;
         _isSubmitting = false;
         _urlController.clear();
       });
-      _startPolling(job.id);
     } catch (e) {
       setState(() {
         _isSubmitting = false;
@@ -64,27 +58,11 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     }
   }
 
-  void _startPolling(int jobId) {
-    _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
-      try {
-        final api = ref.read(apiServiceProvider);
-        final response = await api.getSyncStatus(jobId.toString());
-        if (response.statusCode == 200) {
-          final updated = SyncLogModel.fromJson(response.data);
-          if (mounted) setState(() => _currentJob = updated);
-          if (updated.isDone || updated.isFailed) {
-            _pollTimer?.cancel();
-          }
-        }
-      } catch (_) {
-        _pollTimer?.cancel();
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    // Watch the global sync state - this persists across page changes!
+    final currentJob = ref.watch(activeSyncJobProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -108,7 +86,7 @@ class _SyncPageState extends ConsumerState<SyncPage> {
         // ═══════════════ SCROLLABLE CONTENT ═══════════════
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 150),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 180),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -120,10 +98,14 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 const SizedBox(height: 30),
                 _buildSectionHeader('LIVE ACTIVITY'),
                 const SizedBox(height: 15),
-                if (_currentJob == null)
+                if (currentJob == null)
                   _buildEmptyActivityState()
                 else
-                  _buildActivityCard(_currentJob!),
+                  _buildActivityCard(currentJob),
+                const SizedBox(height: 40),
+                _buildSectionHeader('SMART WATCHER'),
+                const SizedBox(height: 15),
+                _buildWatchList(),
               ],
             ),
           ),
@@ -256,7 +238,8 @@ class _SyncPageState extends ConsumerState<SyncPage> {
     );
   }
 
-  Widget _buildActivityCard(SyncLogModel job) {
+  Widget _buildActivityCard(currentJob) {
+    final job = currentJob;
     Color statusColor;
     IconData statusIcon;
     String statusLabel;
@@ -293,7 +276,16 @@ class _SyncPageState extends ConsumerState<SyncPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('JOB #${job.id}', style: AppTheme.monoStyle(fontSize: 10, color: AppColors.textMuted)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('JOB #${job.id}', style: AppTheme.monoStyle(fontSize: 10, color: AppColors.textMuted)),
+                        GestureDetector(
+                          onTap: () => ref.read(activeSyncJobProvider.notifier).clear(),
+                          child: Icon(Icons.close, size: 14, color: AppColors.textMuted.withOpacity(0.5)),
+                        ),
+                      ],
+                    ),
                     Text(
                       job.spotifyUrl.length > 45 ? '${job.spotifyUrl.substring(0, 45)}...' : job.spotifyUrl,
                       style: AppTheme.monoStyle(fontSize: 11, color: AppColors.textMain),
@@ -350,6 +342,159 @@ class _SyncPageState extends ConsumerState<SyncPage> {
         const SizedBox(width: 10),
         Expanded(child: Container(height: 1, color: Colors.white10)),
       ],
+    );
+  }
+
+  Widget _buildWatchList() {
+    final watchesAsync = ref.watch(watchesProvider);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AngularContainer(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('MONITORED PLAYLISTS', style: AppTheme.monoStyle(fontSize: 10, color: AppColors.textMuted)),
+              GestureDetector(
+                onTap: _showAddWatchDialog,
+                child: Row(
+                  children: [
+                    const Icon(Icons.add_circle_outline, size: 14, color: AppColors.primaryTeal),
+                    const SizedBox(width: 5),
+                    Text('ADD LIST', style: AppTheme.monoStyle(fontSize: 10, color: AppColors.primaryTeal, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        watchesAsync.when(
+          data: (watches) {
+            if (watches.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Text('NO PLAYLISTS WATCHED', style: AppTheme.monoStyle(fontSize: 12, color: AppColors.textMuted.withOpacity(0.5))),
+                ),
+              );
+            }
+            return Column(
+              children: watches.map((w) => _buildWatchItem(w)).toList(),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => Text('Error loading watch list: $err', style: const TextStyle(color: Colors.red)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWatchItem(watch) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.primaryTeal.withValues(alpha: 0.1)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.playlist_play, color: AppColors.primaryMagenta, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(watch.name, style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(fontSize: 14)),
+                const SizedBox(height: 2),
+                Text('Last Sync: ${DateFormat('MMM dd, yyyy HH:mm').format(watch.lastSync)}', style: AppTheme.monoStyle(fontSize: 9, color: AppColors.textMuted)),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.primaryTeal.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text('ACTIVE', style: AppTheme.monoStyle(fontSize: 9, color: AppColors.primaryTeal)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddWatchDialog() {
+    final watchUrlController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.primaryTeal.withValues(alpha: 0.3)),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('ADD WATCH LIST', style: AppTheme.monoStyle(fontSize: 14, color: AppColors.primaryTeal, letterSpacing: 2)),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: watchUrlController,
+                  style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(fontSize: 14),
+                  decoration: InputDecoration(
+                    labelText: 'Spotify Playlist URL',
+                    labelStyle: AppTheme.monoStyle(fontSize: 10, color: AppColors.textMuted),
+                    enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.textMuted.withValues(alpha: 0.3))),
+                    focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primaryTeal)),
+                  ),
+                ),
+                const SizedBox(height: 30),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('CANCEL', style: AppTheme.monoStyle(fontSize: 12, color: AppColors.textMuted)),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryTeal.withValues(alpha: 0.1),
+                        foregroundColor: AppColors.primaryTeal,
+                        side: BorderSide(color: AppColors.primaryTeal.withValues(alpha: 0.5)),
+                      ),
+                      onPressed: () async {
+                        final url = watchUrlController.text.trim();
+                        if (url.isNotEmpty) {
+                          try {
+                            final api = ref.read(apiServiceProvider);
+                            ref.read(notificationProvider.notifier).show('ADDING TO WATCH LIST...');
+                            await addWatch(api, ref, url);
+                            if (context.mounted) Navigator.pop(context);
+                          } catch (e) {
+                            ref.read(notificationProvider.notifier).show('FAILED TO ADD WATCH LIST', isError: true);
+                          }
+                        }
+                      },
+                      child: Text('ADD', style: AppTheme.monoStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

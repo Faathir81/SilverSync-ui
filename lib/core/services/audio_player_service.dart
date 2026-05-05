@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_background/just_audio_background.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../features/archive/data/models/track_model.dart';
 
 // Use PlayerRepeatMode to avoid conflict with Flutter's built-in RepeatMode
@@ -95,13 +97,36 @@ class AudioPlayerNotifier extends StateNotifier<PlayerStateModel> {
   // Track active stream subscriptions so we can cancel them before re-subscribing
   final List<StreamSubscription> _subs = [];
 
-  static const String _baseUrl = 'http://localhost:8080';
+  static const String _baseUrl = 'http://192.168.1.13:8080';
 
   AudioPlayerNotifier() : super(const PlayerStateModel()) {
     // Stop any zombie audio from a previous notifier (hot reload scenario).
     // This ensures clean state — no audio without a visible mini player.
     _sharedPlayer.stop();
+    _loadPreferences();
     _subscribeToPlayer();
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    final repeatIdx = prefs.getInt('repeatMode') ?? PlayerRepeatMode.none.index;
+    final shuffle = prefs.getBool('shuffleEnabled') ?? false;
+
+    if (mounted) {
+      state = state.copyWith(
+        repeatMode: PlayerRepeatMode.values[repeatIdx],
+        shuffleEnabled: shuffle,
+      );
+    }
+  }
+
+  Future<void> _savePreference(String key, dynamic value) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (value is int) {
+      await prefs.setInt(key, value);
+    } else if (value is bool) {
+      await prefs.setBool(key, value);
+    }
   }
 
   void _subscribeToPlayer() {
@@ -127,8 +152,14 @@ class AudioPlayerNotifier extends StateNotifier<PlayerStateModel> {
       if (!mounted) return;
       final loading = ps == ProcessingState.loading || ps == ProcessingState.buffering;
       state = state.copyWith(isLoading: loading);
-      if (ps == ProcessingState.completed) {
-        _handleTrackEnd();
+    }));
+
+    _subs.add(_sharedPlayer.currentIndexStream.listen((index) {
+      if (index != null && index < state.queue.length && mounted) {
+        state = state.copyWith(
+          currentTrack: state.queue[index],
+          queueIndex: index,
+        );
       }
     }));
   }
@@ -212,9 +243,29 @@ class AudioPlayerNotifier extends StateNotifier<PlayerStateModel> {
 
     try {
       final streamUrl = '$_baseUrl/api/v1/tracks/${track.id}/stream';
-      // stop() then setUrl() ensures no overlap when switching tracks quickly
+      // stop() ensures no overlap when switching tracks quickly
       await _sharedPlayer.stop();
-      await _sharedPlayer.setUrl(streamUrl);
+
+      // Build a concatenating source so Android notifications show Prev/Next buttons
+      final playlist = ConcatenatingAudioSource(
+        children: newQueue.map((t) => AudioSource.uri(
+          Uri.parse('$_baseUrl/api/v1/tracks/${t.id}/stream'),
+          tag: MediaItem(
+            id: t.id.toString(),
+            album: "SilverSync Library",
+            title: t.title,
+            artist: t.artist,
+            artUri: Uri.parse(t.albumArtUrl),
+          ),
+        )).toList(),
+      );
+
+      await _sharedPlayer.setAudioSource(
+        playlist,
+        initialIndex: resolvedIdx,
+        initialPosition: Duration.zero,
+      );
+      
       await _sharedPlayer.play();
     } catch (e) {
       debugPrint('[Player] Error loading track: $e');
@@ -240,11 +291,8 @@ class AudioPlayerNotifier extends StateNotifier<PlayerStateModel> {
   }
 
   Future<void> skipNext() async {
-    final nextIdx = _nextIndex();
-    if (nextIdx != null) {
-      await playTrack(state.queue[nextIdx], queue: state.queue, startIndex: nextIdx);
-    } else if (state.repeatMode == PlayerRepeatMode.all && state.queue.isNotEmpty) {
-      await playTrack(state.queue[0], queue: state.queue, startIndex: 0);
+    if (_sharedPlayer.hasNext) {
+      await _sharedPlayer.seekToNext();
     }
   }
 
@@ -253,29 +301,100 @@ class AudioPlayerNotifier extends StateNotifier<PlayerStateModel> {
       await _sharedPlayer.seek(Duration.zero);
       return;
     }
-    final prevIdx = _prevIndex();
-    if (prevIdx != null) {
-      await playTrack(state.queue[prevIdx], queue: state.queue, startIndex: prevIdx);
+    if (_sharedPlayer.hasPrevious) {
+      await _sharedPlayer.seekToPrevious();
     }
   }
 
   Future<void> seekTo(double progress) async {
-    final ms = (state.duration.inMilliseconds * progress).toInt();
-    await _sharedPlayer.seek(Duration(milliseconds: ms));
+    final dur = state.duration;
+    if (dur.inMilliseconds == 0) return;
+    final pos = Duration(milliseconds: (dur.inMilliseconds * progress).round());
+    await _sharedPlayer.seek(pos);
+  }
+
+  void updateCurrentTrackFavorite(bool isFavorite) {
+    if (state.currentTrack != null) {
+      final updatedTrack = state.currentTrack!.copyWith(isFavorite: isFavorite);
+      
+      // Update queue as well so the next/prev doesn't revert the favorite status
+      final updatedQueue = List<TrackModel>.from(state.queue);
+      if (state.queueIndex >= 0 && state.queueIndex < updatedQueue.length) {
+        updatedQueue[state.queueIndex] = updatedTrack;
+      }
+
+      state = state.copyWith(
+        currentTrack: updatedTrack,
+        queue: updatedQueue,
+      );
+    }
   }
 
   void cycleRepeatMode() {
     final modes = PlayerRepeatMode.values;
     final nextMode = modes[(state.repeatMode.index + 1) % modes.length];
     state = state.copyWith(repeatMode: nextMode);
+    _savePreference('repeatMode', nextMode.index);
+
+    // Sync with just_audio
+    switch (nextMode) {
+      case PlayerRepeatMode.none:
+        _sharedPlayer.setLoopMode(LoopMode.off);
+        break;
+      case PlayerRepeatMode.one:
+        _sharedPlayer.setLoopMode(LoopMode.one);
+        break;
+      case PlayerRepeatMode.all:
+        _sharedPlayer.setLoopMode(LoopMode.all);
+        break;
+    }
   }
 
   void toggleShuffle() {
     final newShuffle = !state.shuffleEnabled;
-    final shuffleOrder = newShuffle && state.queue.isNotEmpty
-        ? _buildShuffleOrder(state.queue.length, state.queueIndex)
-        : <int>[];
-    state = state.copyWith(shuffleEnabled: newShuffle, shuffleOrder: shuffleOrder);
+    state = state.copyWith(shuffleEnabled: newShuffle);
+    _savePreference('shuffleEnabled', newShuffle);
+    
+    _sharedPlayer.setShuffleModeEnabled(newShuffle);
+  }
+
+  /// Removes a track from the current active queue (e.g. if it was deleted from library)
+  void removeTrackFromQueue(int trackId) {
+    final oldQueue = state.queue;
+    final indexInQueue = oldQueue.indexWhere((t) => t.id == trackId);
+    
+    if (indexInQueue == -1) return; // Not in current queue
+
+    final newQueue = List<TrackModel>.from(oldQueue)..removeAt(indexInQueue);
+    
+    // If the removed track is the CURRENTLY PLAYING track, we should stop or skip.
+    if (state.currentTrack?.id == trackId) {
+      if (newQueue.isEmpty) {
+        stop();
+      } else {
+        // Skip to next if possible, else just stop
+        skipNext();
+      }
+      return;
+    }
+
+    // Otherwise, just update the queue and adjust index if the removed track was before current
+    int newIndex = state.queueIndex;
+    if (indexInQueue < state.queueIndex) {
+      newIndex--;
+    }
+
+    // Rebuild shuffle order if needed
+    List<int> newShuffleOrder = [];
+    if (state.shuffleEnabled) {
+      newShuffleOrder = _buildShuffleOrder(newQueue.length, newIndex);
+    }
+
+    state = state.copyWith(
+      queue: newQueue,
+      queueIndex: newIndex,
+      shuffleOrder: newShuffleOrder,
+    );
   }
 
   void stop() {
