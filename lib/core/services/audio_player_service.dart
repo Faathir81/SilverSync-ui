@@ -6,6 +6,8 @@ import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../features/archive/data/models/track_model.dart';
+import '../constants/app_constants.dart';
+import 'api_service.dart';
 
 // Use PlayerRepeatMode to avoid conflict with Flutter's built-in RepeatMode
 enum PlayerRepeatMode { none, one, all }
@@ -97,7 +99,7 @@ class AudioPlayerNotifier extends StateNotifier<PlayerStateModel> {
   // Track active stream subscriptions so we can cancel them before re-subscribing
   final List<StreamSubscription> _subs = [];
 
-  static const String _baseUrl = 'http://192.168.1.13:8080';
+  static const String _baseUrl = AppConstants.baseUrl;
 
   AudioPlayerNotifier() : super(const PlayerStateModel()) {
     // Stop any zombie audio from a previous notifier (hot reload scenario).
@@ -226,6 +228,8 @@ class AudioPlayerNotifier extends StateNotifier<PlayerStateModel> {
     final idx = startIndex ?? newQueue.indexWhere((t) => t.id == track.id);
     final resolvedIdx = idx < 0 ? 0 : idx;
 
+    debugPrint('[Player] playTrack: ${track.title} (index: $resolvedIdx, queue: ${newQueue.length})');
+
     final shuffleOrder = state.shuffleEnabled
         ? _buildShuffleOrder(newQueue.length, resolvedIdx)
         : <int>[];
@@ -242,12 +246,9 @@ class AudioPlayerNotifier extends StateNotifier<PlayerStateModel> {
     );
 
     try {
-      final streamUrl = '$_baseUrl/api/v1/tracks/${track.id}/stream';
-      // stop() ensures no overlap when switching tracks quickly
-      await _sharedPlayer.stop();
-
       // Build a concatenating source so Android notifications show Prev/Next buttons
       final playlist = ConcatenatingAudioSource(
+        useLazyPreparation: true,
         children: newQueue.map((t) => AudioSource.uri(
           Uri.parse('$_baseUrl/api/v1/tracks/${t.id}/stream'),
           tag: MediaItem(
@@ -260,6 +261,7 @@ class AudioPlayerNotifier extends StateNotifier<PlayerStateModel> {
         )).toList(),
       );
 
+      // setAudioSource is enough, no need to call stop() first
       await _sharedPlayer.setAudioSource(
         playlist,
         initialIndex: resolvedIdx,
@@ -291,18 +293,34 @@ class AudioPlayerNotifier extends StateNotifier<PlayerStateModel> {
   }
 
   Future<void> skipNext() async {
+    debugPrint('[Player] skipNext (hasNext: ${_sharedPlayer.hasNext}, queue: ${state.queue.length})');
     if (_sharedPlayer.hasNext) {
       await _sharedPlayer.seekToNext();
+    } else if (state.queue.length > 1) {
+      // Only loop back to start if there's more than one track
+      await _sharedPlayer.seek(Duration.zero, index: 0);
+    } else {
+      // If only one track, just reset to start
+      await _sharedPlayer.seek(Duration.zero);
     }
   }
 
   Future<void> skipPrevious() async {
-    if (state.position.inSeconds > 3) {
+    debugPrint('[Player] skipPrevious (hasPrev: ${_sharedPlayer.hasPrevious}, pos: ${state.position.inSeconds}s)');
+    // If we're more than 2 seconds into the song, just restart it (standard behavior)
+    if (state.position.inSeconds > 2) {
       await _sharedPlayer.seek(Duration.zero);
       return;
     }
+    
     if (_sharedPlayer.hasPrevious) {
       await _sharedPlayer.seekToPrevious();
+    } else if (state.queue.length > 1) {
+      // Loop back to the last song if at the beginning of the queue
+      await _sharedPlayer.seek(Duration.zero, index: state.queue.length - 1);
+    } else {
+      // If only one track, just reset to start
+      await _sharedPlayer.seek(Duration.zero);
     }
   }
 
