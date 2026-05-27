@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppConstants {
   // API Configuration
-  static const String baseUrl = 'http://192.168.1.13:8080';
+  static const String baseUrl = 'http://192.168.1.9:8080';
   
   // UI Dimensions
   static const double miniPlayerHeight = 76.0;

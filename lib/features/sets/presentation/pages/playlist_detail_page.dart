@@ -4,7 +4,7 @@ import '../../../../core/constants/colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/cached_album_art.dart';
 import '../../../../core/services/api_service.dart';
-import '../../../../core/services/audio_player_service.dart';
+import '../../../../core/player/audio_player_provider.dart';
 import '../providers/playlist_provider.dart';
 
 class PlaylistDetailPage extends ConsumerWidget {

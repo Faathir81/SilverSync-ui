@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/api_service.dart';
-import '../../../../core/services/audio_player_service.dart';
+import '../../../../core/player/audio_player_provider.dart';
 import '../../../../core/providers/notification_provider.dart';
 import '../providers/track_provider.dart';
 import '../../data/models/track_model.dart';

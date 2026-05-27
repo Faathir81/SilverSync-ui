@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants/colors.dart';
 import '../theme/app_theme.dart';
-import '../services/audio_player_service.dart';
+import '../player/audio_player_provider.dart';
 import 'cached_album_art.dart';
 import 'marquee_text.dart';
 import '../../features/player/presentation/pages/full_player_page.dart';
@@ -13,21 +13,22 @@ class MiniPlayerWidget extends ConsumerWidget {
   void _openFullPlayer(BuildContext context) {
     Navigator.of(context).push(
       PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 500),
-        reverseTransitionDuration: const Duration(milliseconds: 400),
-        pageBuilder: (context, animation, secondaryAnimation) => const FullPlayerPage(),
+        opaque: false, // transparent so our drag-dismiss looks seamless
+        barrierColor: Colors.transparent,
+        transitionDuration: const Duration(milliseconds: 450),
+        reverseTransitionDuration: const Duration(milliseconds: 350),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const FullPlayerPage(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          const begin = Offset(0.0, 1.0);
-          const end = Offset.zero;
-          const curve = Curves.easeOutCubic;
-          final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-          return SlideTransition(
-            position: animation.drive(tween),
-            child: FadeTransition(
-              opacity: animation,
-              child: child,
-            ),
-          );
+          final slide = Tween<Offset>(
+            begin: const Offset(0.0, 1.0),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutQuart,
+            reverseCurve: Curves.easeInQuart,
+          ));
+          return SlideTransition(position: slide, child: child);
         },
       ),
     );

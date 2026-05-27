@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/angular_container.dart';
 import '../../../../core/widgets/cached_album_art.dart';
 import '../../data/models/track_model.dart';
+
 
 class TrackListItem extends StatelessWidget {
   final TrackModel track;

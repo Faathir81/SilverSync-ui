@@ -8,8 +8,8 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/angular_container.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/services/api_service.dart';
-import '../../../../core/providers/notification_provider.dart';
 import '../../../dashboard/presentation/providers/quota_provider.dart';
+
 import '../../../dashboard/presentation/providers/auth_provider.dart';
 import '../widgets/auth_button.dart';
 

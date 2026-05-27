@@ -4,7 +4,7 @@ import '../../../../core/widgets/ambient_background.dart';
 import '../../../../core/widgets/silver_sync_nav_bar.dart';
 import '../../../../core/widgets/mini_player_widget.dart';
 import '../../../../core/widgets/app_notification.dart';
-import '../../../../core/services/audio_player_service.dart';
+import '../../../../core/player/audio_player_provider.dart';
 
 import '../../../dashboard/presentation/pages/dashboard_page.dart';
 import '../../../sync/presentation/pages/sync_page.dart';

@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/api_service.dart';
-import '../../../../core/providers/notification_provider.dart';
 
 import '../providers/sync_provider.dart';
+
 import '../providers/watch_provider.dart';
 import '../widgets/sync_input_card.dart';
 import '../widgets/sync_activity_card.dart';

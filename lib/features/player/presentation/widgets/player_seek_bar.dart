@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/services/audio_player_service.dart';
+import '../../../../core/player/audio_player_provider.dart';
 
 class PlayerSeekBar extends StatelessWidget {
   final PlayerStateModel state;
