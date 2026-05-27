@@ -81,6 +81,8 @@ class SseService {
       icon = Icons.sync;
     }
 
+    final screenHeight = MediaQuery.of(context).size.height;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -94,7 +96,12 @@ class SseService {
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 3),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        margin: const EdgeInsets.all(16),
+        margin: EdgeInsets.only(
+          bottom: screenHeight - 150, // Position at the top
+          left: 16,
+          right: 16,
+        ),
+        dismissDirection: DismissDirection.up,
       ),
     );
   }
