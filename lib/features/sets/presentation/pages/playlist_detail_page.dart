@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/player/audio_player_provider.dart';
+import '../../../../core/widgets/mini_player_widget.dart';
+import '../../../../core/widgets/silver_sync_nav_bar.dart';
 import '../../../../core/widgets/cached_album_art.dart';
 import '../../../../core/services/api_service.dart';
-import '../../../../core/player/audio_player_provider.dart';
+import '../../../main/presentation/providers/main_nav_provider.dart';
+import '../../../archive/presentation/widgets/track_list_item.dart';
 import '../providers/playlist_provider.dart';
 
-class PlaylistDetailPage extends ConsumerWidget {
+class PlaylistDetailPage extends ConsumerStatefulWidget {
   final int playlistId;
   final String playlistName;
 
@@ -18,8 +22,35 @@ class PlaylistDetailPage extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final playlistAsync = ref.watch(playlistDetailProvider(playlistId));
+  ConsumerState<PlaylistDetailPage> createState() => _PlaylistDetailPageState();
+}
+
+class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
+  static const double _expandedHeight = 340;
+  late final ScrollController _scrollController;
+  bool _showTitle = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController()
+      ..addListener(() {
+        if (!_scrollController.hasClients) return;
+        // Title becomes visible once the expanded section has scrolled away
+        final collapsed = _scrollController.offset > (_expandedHeight - kToolbarHeight);
+        if (collapsed != _showTitle) setState(() => _showTitle = collapsed);
+      });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final playlistAsync = ref.watch(playlistDetailProvider(widget.playlistId));
     final playerState = ref.watch(audioPlayerProvider);
     final player = ref.read(audioPlayerProvider.notifier);
 
@@ -27,13 +58,28 @@ class PlaylistDetailPage extends ConsumerWidget {
       backgroundColor: AppColors.background,
       body: playlistAsync.when(
         data: (playlist) => CustomScrollView(
+          controller: _scrollController,
           slivers: [
             // ── Functional Sliver Header ─────────────────────────────────────
             SliverAppBar(
-              expandedHeight: 340,
+              expandedHeight: _expandedHeight,
               pinned: true,
               backgroundColor: AppColors.background,
               elevation: 0,
+              centerTitle: true,
+              // Only show title when header is collapsed (scrolled past the cover)
+              title: AnimatedOpacity(
+                opacity: _showTitle ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 200),
+                child: Text(
+                  playlist.name,
+                  style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textMain,
+                  ),
+                ),
+              ),
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textMain, size: 20),
                 onPressed: () => Navigator.pop(context),
@@ -158,27 +204,11 @@ class PlaylistDetailPage extends ConsumerWidget {
                     final track = playlist.tracks[index];
                     final isPlaying = playerState.currentTrack?.id == track.id;
 
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                      leading: CachedAlbumArt(url: track.albumArtUrl, size: 48, isPlaying: isPlaying),
-                      title: Text(
-                        track.title,
-                        style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(
-                          fontSize: 14,
-                          color: isPlaying ? AppColors.primaryTeal : AppColors.textMain,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text(
-                        track.artist,
-                        style: AppTheme.monoStyle(fontSize: 10, color: AppColors.textMuted.withValues(alpha: 0.6)),
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.more_horiz, color: AppColors.textMuted, size: 20),
-                        onPressed: () => _showTrackActions(context, ref, playlist.id, track),
-                      ),
+                    return TrackListItem(
+                      track: track,
+                      isPlaying: isPlaying,
                       onTap: () => player.playTrack(track, queue: playlist.tracks, startIndex: index),
+                      onLongPress: () => _showTrackActions(context, ref, playlist.id, track),
                     );
                   },
                   childCount: playlist.tracks.length,
@@ -190,6 +220,26 @@ class PlaylistDetailPage extends ConsumerWidget {
         ),
         loading: () => const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryTeal))),
         error: (err, _) => Center(child: Text('ERROR LOADING COLLECTION', style: AppTheme.monoStyle(color: Colors.redAccent))),
+      ),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const MiniPlayerWidget(),
+          const SizedBox(height: 8),
+          SilverSyncNavBar(
+            currentIndex: 3, // Collections is index 3
+            onTap: (index) {
+              if (index == 3) {
+                // If they tap Collections again, just pop the detail page
+                Navigator.pop(context);
+              } else {
+                // If they tap another tab, change global index and pop back to MainScreen
+                ref.read(mainNavProvider.notifier).state = index;
+                Navigator.popUntil(context, (route) => route.isFirst);
+              }
+            },
+          ),
+        ],
       ),
     );
   }

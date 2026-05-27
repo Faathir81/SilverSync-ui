@@ -1,50 +1,69 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/angular_container.dart';
 
 class SystemStatusCard extends StatelessWidget {
   final bool isApiOnline;
 
-  const SystemStatusCard({
-    super.key,
-    required this.isApiOnline,
-  });
+  const SystemStatusCard({super.key, required this.isApiOnline});
 
   @override
   Widget build(BuildContext context) {
-    return AngularContainer(
-      padding: const EdgeInsets.all(15),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.surfaceBorder),
+      ),
       child: Column(
         children: [
-          _buildStatusRow('SYNC_ENGINE', isApiOnline ? 'STANDBY' : 'OFFLINE', isApiOnline ? AppColors.primaryTeal : Colors.redAccent),
-          const SizedBox(height: 8),
-          _buildStatusRow('API_GATEWAY', isApiOnline ? 'NOMINAL' : 'UNREACHABLE', isApiOnline ? AppColors.primaryTeal : Colors.redAccent),
-          const SizedBox(height: 8),
-          _buildStatusRow('AUTH_SERVICE', isApiOnline ? 'ACTIVE' : 'OFFLINE', isApiOnline ? AppColors.primaryTeal : Colors.redAccent),
+          _Row('Sync Engine', isApiOnline ? 'Standby' : 'Offline', isApiOnline),
+          const SizedBox(height: 10),
+          Divider(color: AppColors.surfaceBorder, height: 1),
+          const SizedBox(height: 10),
+          _Row('API Gateway', isApiOnline ? 'Operational' : 'Unreachable', isApiOnline),
+          const SizedBox(height: 10),
+          Divider(color: AppColors.surfaceBorder, height: 1),
+          const SizedBox(height: 10),
+          _Row('Auth Service', isApiOnline ? 'Active' : 'Offline', isApiOnline),
         ],
       ),
     );
   }
+}
 
-  Widget _buildStatusRow(String label, String status, Color color) {
+class _Row extends StatelessWidget {
+  final String label;
+  final String status;
+  final bool isGood;
+  const _Row(this.label, this.status, this.isGood);
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isGood ? AppColors.accentGreen : const Color(0xFFFF6B6B);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: AppTheme.monoStyle(fontSize: 10, color: color)),
+        Text(label, style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(fontSize: 15)),
         Row(
           children: [
-            Icon(Icons.play_arrow, size: 12, color: color),
-            const SizedBox(width: 4),
-            SizedBox(
-              width: 75,
-              child: Text(
-                status, 
-                style: AppTheme.monoStyle(
-                  fontSize: 10, 
-                  color: color, 
-                  fontWeight: FontWeight.bold
-                )
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color,
+                boxShadow: [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 6)],
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              status,
+              style: AppTheme.darkTheme.textTheme.bodyMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
               ),
             ),
           ],

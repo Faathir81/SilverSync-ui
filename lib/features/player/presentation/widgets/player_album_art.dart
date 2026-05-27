@@ -62,7 +62,7 @@ class _PlayerAlbumArtState extends State<PlayerAlbumArt> with SingleTickerProvid
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primaryTeal.withOpacity(0.15),
+                  color: AppColors.accent.withValues(alpha: 0.20),
                   blurRadius: 60,
                   spreadRadius: 10,
                 ),
@@ -77,7 +77,7 @@ class _PlayerAlbumArtState extends State<PlayerAlbumArt> with SingleTickerProvid
               height: 260,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.primaryTeal.withOpacity(0.2), width: 2),
+                border: Border.all(color: AppColors.accent.withValues(alpha: 0.25), width: 2),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(130),

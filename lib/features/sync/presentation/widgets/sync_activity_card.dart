@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/angular_container.dart';
-
 import '../../data/models/sync_log_model.dart';
 
 class SyncActivityCard extends StatelessWidget {
@@ -17,116 +15,102 @@ class SyncActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color statusColor;
-    IconData statusIcon;
-    String statusLabel;
+    final (color, icon, label) = _statusProps();
 
-    if (job.isDone) {
-      statusColor = AppColors.primaryGreen;
-      statusIcon = Icons.check_circle_outline;
-      statusLabel = 'DONE';
-    } else if (job.isFailed) {
-      statusColor = Colors.redAccent;
-      statusIcon = Icons.error_outline;
-      statusLabel = 'FAILED';
-    } else if (job.status == 'processing' || job.status == 'downloading' || job.status == 'uploading') {
-      statusColor = AppColors.primaryTeal;
-      statusIcon = Icons.sync;
-      statusLabel = job.status.toUpperCase();
-    } else {
-      statusColor = AppColors.textMuted;
-      statusIcon = Icons.hourglass_empty;
-      statusLabel = 'PENDING';
-    }
-
-    return AngularContainer(
+    return Container(
       padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.surfaceBorder),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('ACTIVE_TASK // MONITOR',
-                  style: AppTheme.monoStyle(fontSize: 10, color: statusColor.withOpacity(0.7))),
-              GestureDetector(
-                onTap: onDismiss,
-                child: Icon(Icons.close, size: 14, color: AppColors.textMuted.withOpacity(0.5)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 15),
+          // Header Row
           Row(
             children: [
               Container(
-                width: 45,
-                height: 45,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.05),
-                  border: Border.all(color: statusColor.withOpacity(0.2)),
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(statusIcon, color: statusColor, size: 20),
+                child: Icon(icon, color: color, size: 20),
               ),
-              const SizedBox(width: 15),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(job.spotifyUrl,
-                        style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(fontSize: 15),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 4),
-                    Text(statusLabel,
-                        style: AppTheme.monoStyle(
-                            fontSize: 10, color: statusColor, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                    Text(
+                      label,
+                      style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                    Text(
+                      job.spotifyUrl,
+                      style: AppTheme.darkTheme.textTheme.bodyMedium?.copyWith(fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded, size: 18),
+                color: AppColors.textTertiary,
+                onPressed: onDismiss,
+              ),
             ],
           ),
-          const SizedBox(height: 20),
-          _buildProgressSection(statusColor),
-          const SizedBox(height: 15),
-          _buildLogSection(),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildProgressSection(Color color) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('STATUS', style: AppTheme.monoStyle(fontSize: 9, color: AppColors.textMuted)),
-            Text(job.status,
-                style: AppTheme.monoStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+
+          // Progress indicator if active
+          if (!job.isDone && !job.isFailed) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                minHeight: 4,
+                backgroundColor: AppColors.surfaceHigh,
+                valueColor: AlwaysStoppedAnimation(color),
+              ),
+            ),
+            const SizedBox(height: 16),
           ],
-        ),
-      ],
-    );
-  }
 
-  Widget _buildLogSection() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('LAST_RESPONSE_LOG:',
-              style: AppTheme.monoStyle(fontSize: 8, color: AppColors.textMuted.withOpacity(0.5))),
-          const SizedBox(height: 4),
-          Text(job.message.isEmpty ? 'Waiting for engine response...' : job.message,
-              style: AppTheme.monoStyle(fontSize: 9, color: AppColors.textMuted.withOpacity(0.8))),
+          // Message log
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceHigh,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              job.message.isEmpty ? 'Waiting for response...' : job.message,
+              style: AppTheme.monoStyle(
+                fontSize: 11,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  (Color, IconData, String) _statusProps() {
+    if (job.isDone) return (AppColors.accentGreen, Icons.check_circle_rounded, 'Completed');
+    if (job.isFailed) return (const Color(0xFFFF6B6B), Icons.error_rounded, 'Failed');
+    if (job.status == 'processing' || job.status == 'downloading' || job.status == 'uploading') {
+      return (AppColors.accent, Icons.sync_rounded, job.status[0].toUpperCase() + job.status.substring(1));
+    }
+    return (AppColors.textSecondary, Icons.hourglass_empty_rounded, 'Pending');
   }
 }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:marquee/marquee.dart';
+import 'marquee_text.dart';
 
 /// A smart text widget that scrolls (marquee) when [isActive] is true,
 /// and falls back to a static ellipsis text when false.
@@ -26,19 +26,9 @@ class SmartMarquee extends StatelessWidget {
     return SizedBox(
       height: height,
       child: isActive
-          ? Marquee(
+          ? MarqueeText(
               text: text,
               style: style,
-              scrollAxis: Axis.horizontal,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              blankSpace: 50.0,
-              velocity: 30.0,
-              pauseAfterRound: const Duration(seconds: 2),
-              startPadding: 0,
-              accelerationDuration: const Duration(seconds: 1),
-              accelerationCurve: Curves.linear,
-              decelerationDuration: const Duration(milliseconds: 500),
-              decelerationCurve: Curves.easeOut,
             )
           : Text(
               text,

@@ -21,61 +21,36 @@ class ConnectionErrorWidget extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              width: 72,
+              height: 72,
               decoration: BoxDecoration(
-                color: Colors.redAccent.withOpacity(0.05),
+                color: const Color(0xFFFF6B6B).withValues(alpha: 0.08),
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.redAccent.withOpacity(0.2)),
               ),
-              child: const Icon(Icons.wifi_off_rounded, color: Colors.redAccent, size: 40),
+              child: const Icon(Icons.wifi_off_rounded, color: Color(0xFFFF6B6B), size: 32),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             Text(
-              'GATEWAY_CONNECTION_FAILED',
-              style: AppTheme.monoStyle(
-                fontSize: 14,
-                color: Colors.redAccent,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 2,
-              ),
+              'No connection',
+              style: AppTheme.darkTheme.textTheme.bodyLarge,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
-              'Could not establish a secure link to the SilverSync engine. Please check your network bridge.',
-              style: AppTheme.monoStyle(
-                fontSize: 10,
-                color: AppColors.textMuted.withOpacity(0.6),
-              ),
+              'Could not reach the SilverSync server.\nCheck your network and try again.',
+              style: AppTheme.darkTheme.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 32),
-            GestureDetector(
-              onTap: onRetry,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  border: Border.all(color: AppColors.primaryTeal.withOpacity(0.4)),
-                  boxShadow: [
-                    BoxShadow(color: AppColors.primaryTeal.withOpacity(0.1), blurRadius: 10),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.refresh_rounded, color: AppColors.primaryTeal, size: 16),
-                    const SizedBox(width: 10),
-                    Text(
-                      'RETRY_CONNECTION',
-                      style: AppTheme.monoStyle(
-                        fontSize: 11,
-                        color: AppColors.primaryTeal,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ],
-                ),
+            const SizedBox(height: 28),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text('Retry', style: TextStyle(fontWeight: FontWeight.w600)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
               ),
             ),
           ],

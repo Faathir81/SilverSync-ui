@@ -15,38 +15,31 @@ class PlayerControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget playBtn = AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: 72,
-      height: 72,
+    Widget playBtn = Container(
+      width: 76,
+      height: 76,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: state.isPlaying
-              ? [AppColors.primaryTeal, const Color(0xFF00B8CC)]
-              : [AppColors.primaryTeal.withOpacity(0.8), AppColors.primaryTeal.withOpacity(0.5)],
-        ),
+        color: AppColors.textMain,
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryTeal.withOpacity(state.isPlaying ? 0.55 : 0.25),
-            blurRadius: state.isPlaying ? 28 : 16,
-            spreadRadius: state.isPlaying ? 4 : 1,
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: state.isLoading
           ? const Padding(
-              padding: EdgeInsets.all(22),
+              padding: EdgeInsets.all(24),
               child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                valueColor: AlwaysStoppedAnimation(Colors.black),
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation(AppColors.background),
               ),
             )
           : Icon(
               state.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-              size: 38,
+              size: 40,
               color: AppColors.background,
             ),
     );
@@ -56,9 +49,9 @@ class PlayerControls extends StatelessWidget {
           .animate(onPlay: (c) => c.repeat(reverse: true))
           .scale(
             begin: const Offset(1, 1),
-            end: const Offset(1.05, 1.05),
-            duration: 1200.ms,
-            curve: Curves.easeInOut,
+            end: const Offset(1.03, 1.03),
+            duration: 1500.ms,
+            curve: Curves.easeInOutSine,
           );
     }
 
@@ -70,21 +63,21 @@ class PlayerControls extends StatelessWidget {
           children: [
             _PressableButton(
               onTap: player.skipPrevious,
-              child: _controlCircle(Icons.skip_previous_rounded, 30),
+              child: _controlIcon(Icons.skip_previous_rounded, 42),
             ),
-            const SizedBox(width: 30),
+            const SizedBox(width: 40),
             _PressableButton(
               onTap: player.togglePlayPause,
               child: playBtn,
             ),
-            const SizedBox(width: 30),
+            const SizedBox(width: 40),
             _PressableButton(
               onTap: player.skipNext,
-              child: _controlCircle(Icons.skip_next_rounded, 30),
+              child: _controlIcon(Icons.skip_next_rounded, 42),
             ),
           ],
         ),
-        const SizedBox(height: 30),
+        const SizedBox(height: 36),
         // ── Secondary Controls: Shuffle / Repeat ──
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -94,7 +87,7 @@ class PlayerControls extends StatelessWidget {
               isActive: state.shuffleEnabled,
               onTap: player.toggleShuffle,
             ),
-            const SizedBox(width: 25),
+            const SizedBox(width: 32),
             _ModeButton(
               icon: state.repeatMode == PlayerRepeatMode.one
                   ? Icons.repeat_one_rounded
@@ -108,24 +101,17 @@ class PlayerControls extends StatelessWidget {
     );
   }
 
-  Widget _controlCircle(IconData icon, double size) {
+  Widget _controlIcon(IconData icon, double size) {
     return Container(
-      width: 54,
-      height: 54,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColors.primaryTeal.withOpacity(0.07),
-        border: Border.all(color: AppColors.primaryTeal.withOpacity(0.18)),
-      ),
-      child: Icon(icon, size: size, color: Colors.white.withOpacity(0.85)),
+      width: 56,
+      height: 56,
+      alignment: Alignment.center,
+      child: Icon(icon, size: size, color: AppColors.textMain),
     );
   }
 }
 
 // ─── Pressable Button ─────────────────────────────────────────────────────────
-/// A clean stateful button with scale-on-press animation.
-/// Uses proper onTapDown/onTapUp to avoid gesture conflicts that caused
-/// the "pause triggers next" bug.
 class _PressableButton extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;
@@ -150,7 +136,7 @@ class _PressableButtonState extends State<_PressableButton> {
       },
       onTapCancel: () => setState(() => _isPressed = false),
       child: AnimatedScale(
-        scale: _isPressed ? 0.88 : 1.0,
+        scale: _isPressed ? 0.9 : 1.0,
         duration: const Duration(milliseconds: 100),
         curve: Curves.easeInOut,
         child: widget.child,
@@ -189,7 +175,7 @@ class _ModeButtonState extends State<_ModeButton> {
       },
       onTapCancel: () => setState(() => _isPressed = false),
       child: AnimatedScale(
-        scale: _isPressed ? 0.88 : 1.0,
+        scale: _isPressed ? 0.9 : 1.0,
         duration: const Duration(milliseconds: 100),
         curve: Curves.easeInOut,
         child: AnimatedContainer(
@@ -198,21 +184,12 @@ class _ModeButtonState extends State<_ModeButton> {
           height: 44,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: widget.isActive
-                ? AppColors.primaryTeal.withOpacity(0.15)
-                : Colors.transparent,
-            border: Border.all(
-              color: widget.isActive
-                  ? AppColors.primaryTeal.withOpacity(0.5)
-                  : AppColors.textMuted.withOpacity(0.2),
-            ),
+            color: widget.isActive ? AppColors.surface : Colors.transparent,
           ),
           child: Icon(
             widget.icon,
-            size: 20,
-            color: widget.isActive
-                ? AppColors.primaryTeal
-                : AppColors.textMuted.withOpacity(0.4),
+            size: 22,
+            color: widget.isActive ? AppColors.primaryTeal : AppColors.textMuted,
           ),
         ),
       ),

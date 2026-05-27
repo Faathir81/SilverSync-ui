@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/angular_container.dart';
 
 class PlaylistStatsBar extends StatelessWidget {
   final int collectionsCount;
@@ -17,33 +16,50 @@ class PlaylistStatsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AngularContainer(
-      cutSize: 8,
-      padding: const EdgeInsets.symmetric(vertical: 12),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.surfaceBorder),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatItem(collectionsCount.toString(), 'COLLECTIONS', AppColors.primaryTeal),
-          Container(width: 1, height: 32, color: AppColors.primaryTeal.withOpacity(0.15)),
-          _buildStatItem(totalTracks.toString(), 'TOTAL TRACKS', AppColors.primaryMagenta),
-          Container(width: 1, height: 32, color: AppColors.primaryTeal.withOpacity(0.15)),
-          _buildStatItem(libraryUsed, 'LIBRARY', AppColors.textMain),
+          _StatItem(value: collectionsCount.toString(), label: 'Collections', color: AppColors.accent),
+          Container(width: 1, height: 32, color: AppColors.surfaceBorder),
+          _StatItem(value: totalTracks.toString(), label: 'Total Tracks', color: AppColors.accentWarm),
+          Container(width: 1, height: 32, color: AppColors.surfaceBorder),
+          _StatItem(value: libraryUsed, label: 'Library Size', color: AppColors.textPrimary),
         ],
       ),
     );
   }
+}
 
-  Widget _buildStatItem(String value, String label, Color valueColor) {
+class _StatItem extends StatelessWidget {
+  final String value;
+  final String label;
+  final Color color;
+  const _StatItem({required this.value, required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       children: [
         Text(
-          value, 
-          style: AppTheme.monoStyle(fontSize: 18, color: valueColor).copyWith(
-            shadows: [Shadow(color: valueColor.withOpacity(0.6), blurRadius: 5)]
-          )
+          value,
+          style: AppTheme.darkTheme.textTheme.displaySmall?.copyWith(
+            fontSize: 22,
+            color: color,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(height: 4),
-        Text(label, style: AppTheme.monoStyle(fontSize: 10, color: AppColors.textMuted.withOpacity(0.5))),
+        Text(
+          label,
+          style: AppTheme.darkTheme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+        ),
       ],
     );
   }

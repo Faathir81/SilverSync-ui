@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/angular_container.dart';
 
 class AuthNodeCard extends StatelessWidget {
   final String title;
@@ -23,62 +22,72 @@ class AuthNodeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AngularContainer(
-        padding: const EdgeInsets.all(15),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.surfaceBorder),
+        ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isOnline 
-                    ? AppColors.primaryTeal.withOpacity(0.3) 
-                    : Colors.white10
-                ),
+                color: isOnline
+                    ? AppColors.accentGreen.withValues(alpha: 0.12)
+                    : AppColors.surfaceHigh,
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
-                icon, 
-                color: isOnline ? AppColors.primaryTeal : AppColors.textMuted, 
-                size: 20
+                icon,
+                color: isOnline ? AppColors.accentGreen : AppColors.textTertiary,
+                size: 18,
               ),
             ),
-            const SizedBox(width: 15),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(fontSize: 14)),
+                  Text(title, style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(fontSize: 15)),
                   Text(
-                    subtitle, 
-                    style: AppTheme.monoStyle(
-                      fontSize: 9, 
-                      color: isOnline ? AppColors.primaryTeal.withOpacity(0.7) : AppColors.textMuted
-                    )
+                    subtitle,
+                    style: AppTheme.darkTheme.textTheme.bodyMedium?.copyWith(fontSize: 12),
                   ),
                 ],
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: isOnline 
-                  ? AppColors.primaryTeal.withOpacity(0.1) 
-                  : Colors.redAccent.withOpacity(0.05),
-                border: Border.all(
-                  color: isOnline 
-                    ? AppColors.primaryTeal.withOpacity(0.3) 
-                    : Colors.redAccent.withOpacity(0.2)
-                ),
+                color: isOnline
+                    ? AppColors.accentGreen.withValues(alpha: 0.12)
+                    : Colors.white.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(
-                isOnline ? 'ONLINE' : 'OFFLINE',
-                style: AppTheme.monoStyle(
-                  fontSize: 8, 
-                  color: isOnline ? AppColors.primaryTeal : Colors.redAccent,
-                  fontWeight: FontWeight.bold
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isOnline ? AppColors.accentGreen : AppColors.textTertiary,
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    isOnline ? 'Online' : 'Offline',
+                    style: AppTheme.darkTheme.textTheme.bodySmall?.copyWith(
+                      color: isOnline ? AppColors.accentGreen : AppColors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

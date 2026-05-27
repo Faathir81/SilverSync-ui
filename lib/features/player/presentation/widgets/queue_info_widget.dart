@@ -20,14 +20,14 @@ class QueueInfoWidget extends StatelessWidget {
         Icon(
           Icons.queue_music_rounded,
           size: 12,
-          color: AppColors.textMuted.withOpacity(0.35),
+          color: AppColors.textMuted.withValues(alpha: 0.35),
         ),
         const SizedBox(width: 6),
         Text(
           '${state.queueIndex + 1} OF ${state.queue.length}',
           style: AppTheme.monoStyle(
             fontSize: 10,
-            color: AppColors.textMuted.withOpacity(0.35),
+            color: AppColors.textMuted.withValues(alpha: 0.35),
           ),
         ),
       ],

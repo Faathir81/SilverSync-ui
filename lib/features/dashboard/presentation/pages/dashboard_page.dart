@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-
 import '../../../../core/constants/colors.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/angular_container.dart';
-
 import '../providers/quota_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/storage_quota_card.dart';
@@ -15,180 +12,164 @@ import '../widgets/system_status_card.dart';
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
+  String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning.';
+    if (hour < 18) return 'Good afternoon.';
+    return 'Good evening.';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final quotaAsync = ref.watch(quotaProvider);
     final authAsync = ref.watch(authStatusProvider);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // ═══════════════ STICKY HEADER ═══════════════
-        Container(
-          color: AppColors.background,
-          padding: const EdgeInsets.fromLTRB(20, 60, 20, 15),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 25),
-              _buildModuleHeader('HOME // MODULE'),
-            ],
-          ),
-        ),
-        Container(height: 1, color: AppColors.primaryTeal.withOpacity(0.15)),
-
-        // ═══════════════ SCROLLABLE CONTENT ═══════════════
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 180),
+    return CustomScrollView(
+      slivers: [
+        // ── Large Title Header ─────────────────────────────────────────
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Quota Section
-                quotaAsync.when(
-                  data: (quota) => StorageQuotaCard(quota: quota),
-                  loading: () => const _LoadingPlaceholder(),
-                  error: (_, __) => _buildOfflineStorageCard(ref),
-                ),
-                
-                const SizedBox(height: 25),
-                _buildSectionHeader('AUTH NODES'),
-                const SizedBox(height: 15),
-                
-                // Auth Nodes Section
-                authAsync.when(
-                  data: (auth) => Column(
-                    children: [
-                      AuthNodeCard(
-                        title: 'Spotify',
-                        subtitle: auth.isSpotifyOnline ? 'OAuth 2.0 - Token Active' : 'Offline / No Token',
-                        icon: FontAwesomeIcons.spotify,
-                        isOnline: auth.isSpotifyOnline,
-                      ),
-                      const SizedBox(height: 12),
-                      AuthNodeCard(
-                        title: 'Google Drive',
-                        subtitle: auth.isGoogleOnline ? 'Drive API v3 - Scopes OK' : 'Offline / No Scopes',
-                        icon: FontAwesomeIcons.googleDrive,
-                        isOnline: auth.isGoogleOnline,
-                      ),
-                    ],
-                  ),
-                  loading: () => const _LoadingPlaceholder(),
-                  error: (_, __) => const Column(
-                    children: [
-                      AuthNodeCard(title: 'Spotify', subtitle: 'Connection Failed', icon: FontAwesomeIcons.spotify, isOnline: false),
-                      SizedBox(height: 12),
-                      AuthNodeCard(title: 'Google Drive', subtitle: 'Connection Failed', icon: FontAwesomeIcons.googleDrive, isOnline: false),
-                    ],
+                Text(
+                  'SilverSync',
+                  style: AppTheme.darkTheme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 13,
+                    color: AppColors.accent,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
                   ),
                 ),
-                
-                const SizedBox(height: 25),
-                
-                // System Status Section
-                authAsync.when(
-                  data: (auth) => const SystemStatusCard(isApiOnline: true),
-                  loading: () => const SystemStatusCard(isApiOnline: false),
-                  error: (_, __) => const SystemStatusCard(isApiOnline: false),
+                const SizedBox(height: 4),
+                Text(
+                  _greeting(),
+                  style: AppTheme.darkTheme.textTheme.displayLarge,
                 ),
               ],
             ),
           ),
         ),
-      ],
-    );
-  }
 
-  Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('SYS // ACTIVE', style: AppTheme.monoStyle(fontSize: 12, color: AppColors.primaryTeal.withOpacity(0.7))),
-            const SizedBox(height: 4),
-            Text('SILVERSYNC', style: AppTheme.darkTheme.textTheme.displayLarge?.copyWith(
-              shadows: [const Shadow(color: AppColors.primaryTeal, blurRadius: 10)],
-            )),
-          ],
+        // ── Status Bar ──────────────────────────────────────────────────
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+            child: authAsync.when(
+              data: (auth) => _StatusPill(isOnline: true),
+              loading: () => const _StatusPill(isOnline: false),
+              error: (_, __) => const _StatusPill(isOnline: false),
+            ),
+          ),
         ),
-        Row(
-          children: [
-            _buildStatusBadge('LIVE', AppColors.primaryTeal),
-            const SizedBox(width: 10),
-            _buildSmallSquareBadge('SS'),
-          ],
+
+        const SliverToBoxAdapter(child: SizedBox(height: 32)),
+
+        // ── Storage Card ─────────────────────────────────────────────────
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: quotaAsync.when(
+              data: (quota) => StorageQuotaCard(quota: quota),
+              loading: () => const _LoadingCard(height: 100),
+              error: (_, __) => _buildOfflineCard(ref),
+            ),
+          ),
         ),
-      ],
-    );
-  }
 
-  Widget _buildModuleHeader(String title) {
-    return Row(
-      children: [
-        Container(width: 4, height: 16, color: AppColors.primaryTeal),
-        const SizedBox(width: 10),
-        Text(title, style: AppTheme.monoStyle(fontSize: 12, color: AppColors.textMain)),
-      ],
-    );
-  }
+        const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
-  Widget _buildSectionHeader(String title) {
-    return Row(
-      children: [
-        Expanded(child: Container(height: 1, color: Colors.white10)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 15),
-          child: Text(title, style: AppTheme.monoStyle(fontSize: 10, color: AppColors.textMuted)),
+        // ── Section: Connections ─────────────────────────────────────────
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+            child: AppTheme.sectionLabel('Connections'),
+          ),
         ),
-        Expanded(child: Container(height: 1, color: Colors.white10)),
+
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: authAsync.when(
+              data: (auth) => Column(
+                children: [
+                  AuthNodeCard(
+                    title: 'Spotify',
+                    subtitle: auth.isSpotifyOnline ? 'Connected' : 'Not connected',
+                    icon: FontAwesomeIcons.spotify,
+                    isOnline: auth.isSpotifyOnline,
+                  ),
+                  const SizedBox(height: 10),
+                  AuthNodeCard(
+                    title: 'Google Drive',
+                    subtitle: auth.isGoogleOnline ? 'Connected' : 'Not connected',
+                    icon: FontAwesomeIcons.googleDrive,
+                    isOnline: auth.isGoogleOnline,
+                  ),
+                ],
+              ),
+              loading: () => const _LoadingCard(height: 130),
+              error: (_, __) => Column(
+                children: [
+                  AuthNodeCard(title: 'Spotify', subtitle: 'Unavailable', icon: FontAwesomeIcons.spotify, isOnline: false),
+                  const SizedBox(height: 10),
+                  AuthNodeCard(title: 'Google Drive', subtitle: 'Unavailable', icon: FontAwesomeIcons.googleDrive, isOnline: false),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        const SliverToBoxAdapter(child: SizedBox(height: 32)),
+
+        // ── Section: System ──────────────────────────────────────────────
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+            child: AppTheme.sectionLabel('System'),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: authAsync.when(
+              data: (_) => const SystemStatusCard(isApiOnline: true),
+              loading: () => const SystemStatusCard(isApiOnline: false),
+              error: (_, __) => const SystemStatusCard(isApiOnline: false),
+            ),
+          ),
+        ),
+
+        const SliverToBoxAdapter(child: SizedBox(height: 180)),
       ],
     );
   }
 
-  Widget _buildStatusBadge(String text, Color color) {
+  Widget _buildOfflineCard(WidgetRef ref) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        border: Border.all(color: color.withOpacity(0.4)),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.surfaceBorder),
       ),
-      child: Text(text, style: AppTheme.monoStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold)),
-    );
-  }
-
-  Widget _buildSmallSquareBadge(String text) {
-    return AngularContainer(
-      cutSize: 4,
-      width: 32,
-      height: 32,
-      child: Center(
-        child: Text(text, style: AppTheme.monoStyle(fontSize: 10, color: AppColors.primaryTeal)),
-      ),
-    );
-  }
-
-  Widget _buildOfflineStorageCard(WidgetRef ref) {
-    return AngularContainer(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          Icon(Icons.cloud_off, size: 40, color: Colors.redAccent.withOpacity(0.8)),
-          const SizedBox(height: 15),
-          Text('API DISCONNECTED', style: AppTheme.monoStyle(fontSize: 16, color: Colors.redAccent, letterSpacing: 2)),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
+          Icon(Icons.cloud_off_rounded, size: 36, color: Colors.redAccent.withValues(alpha: 0.7)),
+          const SizedBox(height: 12),
+          Text('Cannot reach server', style: AppTheme.darkTheme.textTheme.bodyLarge),
+          const SizedBox(height: 4),
+          Text('Check your network connection', style: AppTheme.darkTheme.textTheme.bodyMedium),
+          const SizedBox(height: 20),
+          OutlinedButton.icon(
             onPressed: () => ref.read(quotaProvider.notifier).refresh(),
-            icon: const Icon(Icons.refresh, size: 14),
-            label: Text('RETRY CONNECTION', style: AppTheme.monoStyle(fontSize: 10)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent.withOpacity(0.1),
-              foregroundColor: Colors.redAccent,
-              side: const BorderSide(color: Colors.redAccent),
+            icon: const Icon(Icons.refresh_rounded, size: 16),
+            label: const Text('Retry'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.accent,
+              side: const BorderSide(color: AppColors.accent),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
           ),
         ],
@@ -197,15 +178,56 @@ class DashboardPage extends ConsumerWidget {
   }
 }
 
-class _LoadingPlaceholder extends StatelessWidget {
-  const _LoadingPlaceholder();
+class _StatusPill extends StatelessWidget {
+  final bool isOnline;
+  const _StatusPill({required this.isOnline});
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(20),
-        child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryTeal)),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(
+            color: isOnline ? AppColors.accentGreen : AppColors.textTertiary,
+            shape: BoxShape.circle,
+            boxShadow: isOnline ? [
+              BoxShadow(color: AppColors.accentGreen.withValues(alpha: 0.5), blurRadius: 6),
+            ] : null,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          isOnline ? 'Connected' : 'Offline',
+          style: AppTheme.darkTheme.textTheme.bodySmall?.copyWith(
+            color: isOnline ? AppColors.accentGreen : AppColors.textTertiary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LoadingCard extends StatelessWidget {
+  final double height;
+  const _LoadingCard({required this.height});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Center(
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
+        ),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants/colors.dart';
@@ -13,7 +14,7 @@ class MiniPlayerWidget extends ConsumerWidget {
   void _openFullPlayer(BuildContext context) {
     Navigator.of(context).push(
       PageRouteBuilder(
-        opaque: false, // transparent so our drag-dismiss looks seamless
+        opaque: false,
         barrierColor: Colors.transparent,
         transitionDuration: const Duration(milliseconds: 450),
         reverseTransitionDuration: const Duration(milliseconds: 350),
@@ -42,89 +43,168 @@ class MiniPlayerWidget extends ConsumerWidget {
     final state = ref.watch(audioPlayerProvider);
     final player = ref.read(audioPlayerProvider.notifier);
 
-    return GestureDetector(
-      onTap: () => _openFullPlayer(context),
-      onHorizontalDragEnd: (d) {
-        if ((d.primaryVelocity ?? 0) > 300) player.skipPrevious();
-        if ((d.primaryVelocity ?? 0) < -300) player.skipNext();
-      },
-      child: Container(
-        color: AppColors.background.withOpacity(0.95), // Original Flat Style
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Progress line on top
-            Container(
-              height: 2,
-              width: double.infinity,
-              color: Colors.white.withOpacity(0.05),
-              child: FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: state.progress,
-                child: Container(color: AppColors.primaryTeal),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: GestureDetector(
+        onTap: () => _openFullPlayer(context),
+        onHorizontalDragEnd: (d) {
+          if ((d.primaryVelocity ?? 0) > 300) player.skipPrevious();
+          if ((d.primaryVelocity ?? 0) < -300) player.skipNext();
+        },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.surfaceHigh.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.07),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.accent.withValues(alpha: 0.08),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ── Main Row ──────────────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 8, 8),
+                    child: Row(
+                      children: [
+                        // Album art
+                        Hero(
+                          tag: 'albumArt_${state.currentTrack?.id ?? "none"}',
+                          child: CachedAlbumArt(
+                            url: state.currentTrack?.albumArtUrl,
+                            size: 46,
+                            borderRadius: 10,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+
+                        // Track info
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              MarqueeText(
+                                text: state.currentTrack?.title ?? '',
+                                style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ) ?? const TextStyle(),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                state.currentTrack?.artist ?? '',
+                                style: AppTheme.darkTheme.textTheme.bodyMedium?.copyWith(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Controls
+                        _Btn(
+                          icon: Icons.skip_previous_rounded,
+                          size: 22,
+                          onTap: player.skipPrevious,
+                        ),
+                        _Btn(
+                          icon: state.isPlaying
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                          size: 28,
+                          isAccent: true,
+                          onTap: player.togglePlayPause,
+                        ),
+                        _Btn(
+                          icon: Icons.skip_next_rounded,
+                          size: 22,
+                          onTap: player.skipNext,
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                    ),
+                  ),
+
+                  // ── Progress Bar ──────────────────────────────────────────
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(18),
+                    ),
+                    child: LinearProgressIndicator(
+                      value: state.progress,
+                      backgroundColor: Colors.white.withValues(alpha: 0.06),
+                      valueColor: const AlwaysStoppedAnimation(AppColors.accent),
+                      minHeight: 2.5,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Hero(
-                  tag: 'albumArt_${state.currentTrack?.id ?? "none"}',
-                  child: CachedAlbumArt(
-                    url: state.currentTrack?.albumArtUrl,
-                    size: 45,
-                    borderRadius: 4,
-                  ),
-                ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      MarqueeText(
-                        text: state.currentTrack?.title ?? 'NO TRACK',
-                        style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(fontSize: 14, color: Colors.white) ?? const TextStyle(fontSize: 14, color: Colors.white),
-                      ),
-                      Text(
-                        state.currentTrack?.artist ?? 'SYSTEM IDLE',
-                        style: AppTheme.monoStyle(fontSize: 10, color: AppColors.primaryTeal.withOpacity(0.5)),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                _playerAction(
-                  state.isPlaying ? Icons.pause : Icons.play_arrow,
-                  player.togglePlayPause,
-                ),
-                const SizedBox(width: 10),
-                _playerAction(
-                  Icons.skip_next,
-                  player.skipNext,
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _playerAction(IconData icon, VoidCallback onTap) {
+class _Btn extends StatefulWidget {
+  final IconData icon;
+  final double size;
+  final bool isAccent;
+  final VoidCallback onTap;
+
+  const _Btn({
+    required this.icon,
+    required this.onTap,
+    this.size = 22,
+    this.isAccent = false,
+  });
+
+  @override
+  State<_Btn> createState() => _BtnState();
+}
+
+class _BtnState extends State<_Btn> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: Colors.white10),
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.85 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          width: 40,
+          height: 40,
+          alignment: Alignment.center,
+          child: Icon(
+            widget.icon,
+            size: widget.size,
+            color: widget.isAccent ? AppColors.textPrimary : AppColors.textSecondary,
+          ),
         ),
-        child: Icon(icon, size: 20, color: Colors.white70),
       ),
     );
   }

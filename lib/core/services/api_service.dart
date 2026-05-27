@@ -75,6 +75,11 @@ class ApiService {
       _dio.post('/api/v1/playlists/$playlistId/tracks/$trackId');
   Future<Response> removeTrackFromPlaylist(String playlistId, String trackId) =>
       _dio.delete('/api/v1/playlists/$playlistId/tracks/$trackId');
+
+  // ── Preferences ────────────────────────────────────────────────────────────
+  Future<Response> getPreferences() => _dio.get('/api/v1/preferences');
+  Future<Response> updatePreferences(Map<String, dynamic> data) =>
+      _dio.put('/api/v1/preferences', data: data);
 }
 
 // ─── Interceptors ─────────────────────────────────────────────────────────────

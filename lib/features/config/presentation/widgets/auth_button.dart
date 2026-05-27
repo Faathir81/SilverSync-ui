@@ -10,7 +10,7 @@ class AuthButton extends StatelessWidget {
   final bool isLoading;
   final VoidCallback onConnect;
   final VoidCallback onRefresh;
-  final VoidCallback onRevoke;
+  final Future<void> Function() onRevoke;
 
   const AuthButton({
     super.key,
@@ -26,82 +26,84 @@ class AuthButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: isLoading ? null : (isOnline ? onRefresh : onConnect),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        decoration: BoxDecoration(
-          color: isOnline
-              ? accentColor.withOpacity(0.04)
-              : AppColors.primaryTeal.withOpacity(0.04),
-          border: Border.all(
-            color: isOnline
-                ? accentColor.withOpacity(0.2)
-                : AppColors.primaryTeal.withOpacity(0.25),
-          ),
-        ),
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: (isOnline ? accentColor : AppColors.primaryTeal).withOpacity(0.1),
-                border: Border.all(color: (isOnline ? accentColor : AppColors.primaryTeal).withOpacity(0.3)),
-              ),
-              child: isLoading
-                  ? const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 1.5)))
-                  : Icon(icon, color: isOnline ? accentColor : AppColors.primaryTeal, size: 20),
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.surfaceBorder),
+      ),
+      child: Row(
+        children: [
+          // Service icon
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
             ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name, style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(
-                    fontSize: 14,
-                    color: AppColors.textMain,
-                  )),
-                  Text(
-                    isOnline ? 'Connected — Tap to refresh' : 'Not connected — Tap to login',
-                    style: AppTheme.monoStyle(fontSize: 9, color: isOnline ? accentColor.withOpacity(0.6) : AppColors.primaryTeal.withOpacity(0.5)),
-                  ),
-                ],
-              ),
-            ),
-            GestureDetector(
-              onTap: isLoading ? null : (isOnline ? onRevoke : onConnect),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: isOnline ? Colors.redAccent.withOpacity(0.08) : AppColors.primaryTeal.withOpacity(0.1),
-                  border: Border.all(color: isOnline ? Colors.redAccent.withOpacity(0.3) : AppColors.primaryTeal.withOpacity(0.4)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      isOnline ? Icons.link_off : Icons.open_in_browser,
-                      size: 12,
-                      color: isOnline ? Colors.redAccent.withOpacity(0.8) : AppColors.primaryTeal,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      isOnline ? 'REVOKE' : 'CONNECT',
-                      style: AppTheme.monoStyle(
-                        fontSize: 10,
-                        color: isOnline ? Colors.redAccent.withOpacity(0.8) : AppColors.primaryTeal,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1,
+            child: isLoading
+                ? Center(
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(accentColor),
                       ),
                     ),
-                  ],
+                  )
+                : Icon(icon, color: accentColor, size: 22),
+          ),
+          const SizedBox(width: 14),
+
+          // Name + status
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(fontSize: 15)),
+                const SizedBox(height: 2),
+                Text(
+                  isOnline ? 'Connected' : 'Not connected',
+                  style: AppTheme.darkTheme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 12,
+                    color: isOnline ? AppColors.accentGreen : AppColors.textTertiary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Action button
+          GestureDetector(
+            onTap: isLoading ? null : (isOnline ? onRevoke : onConnect),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: isOnline
+                    ? const Color(0xFFFF6B6B).withValues(alpha: 0.1)
+                    : AppColors.accent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isOnline
+                      ? const Color(0xFFFF6B6B).withValues(alpha: 0.3)
+                      : AppColors.accent.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Text(
+                isOnline ? 'Revoke' : 'Connect',
+                style: AppTheme.darkTheme.textTheme.bodySmall?.copyWith(
+                  color: isOnline ? const Color(0xFFFF6B6B) : AppColors.accent,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

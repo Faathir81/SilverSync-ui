@@ -8,10 +8,7 @@ import '../../../sets/presentation/providers/playlist_provider.dart';
 class AddToPlaylistSheet extends ConsumerWidget {
   final int trackId;
 
-  const AddToPlaylistSheet({
-    super.key,
-    required this.trackId,
-  });
+  const AddToPlaylistSheet({super.key, required this.trackId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,79 +16,95 @@ class AddToPlaylistSheet extends ConsumerWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.background.withOpacity(0.95),
+        color: AppColors.surfaceHigh,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border.all(color: AppColors.primaryTeal.withOpacity(0.2)),
+        border: Border.all(color: AppColors.surfaceBorder),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Handle bar
           Center(
             child: Container(
-              width: 40,
+              width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.textMuted.withOpacity(0.3),
+                color: AppColors.textTertiary,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
-          const SizedBox(height: 24),
-          Text(
-            'ADD TO COLLECTION',
-            style: AppTheme.monoStyle(fontSize: 14, color: AppColors.primaryTeal, letterSpacing: 2),
-          ),
+          const SizedBox(height: 20),
+          Text('Add to Collection', style: AppTheme.darkTheme.textTheme.displaySmall?.copyWith(fontSize: 18)),
           const SizedBox(height: 20),
           playlistsAsync.when(
             data: (playlists) {
               if (playlists.isEmpty) {
                 return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  padding: const EdgeInsets.symmetric(vertical: 32),
                   child: Center(
-                    child: Text('NO COLLECTIONS FOUND',
-                        style: AppTheme.monoStyle(fontSize: 12, color: AppColors.textMuted)),
+                    child: Text('No collections yet', style: AppTheme.darkTheme.textTheme.bodyMedium),
                   ),
                 );
               }
-              return ListView.builder(
+              return ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: playlists.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
                 itemBuilder: (context, index) {
                   final pl = playlists[index];
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.primaryTeal.withOpacity(0.1)),
-                      ),
-                      child: const Icon(Icons.playlist_play_rounded, color: AppColors.primaryTeal, size: 20),
-                    ),
-                    title: Text(pl.name, style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(fontSize: 15)),
-                    subtitle: Text('${pl.tracks.length} tracks',
-                        style: AppTheme.monoStyle(fontSize: 10, color: AppColors.textMuted)),
+                  return GestureDetector(
                     onTap: () {
-                      final api = ref.read(apiServiceProvider);
-                      addTrackToPlaylist(api, ref, pl.id, trackId);
+                      addTrackToPlaylist(ref.read(apiServiceProvider), ref, pl.id, trackId);
                       Navigator.pop(context);
                     },
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.surfaceBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: AppColors.accent.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.queue_music_rounded, color: AppColors.accent, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(pl.name, style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(fontSize: 15)),
+                                Text('${pl.tracks.length} tracks', style: AppTheme.darkTheme.textTheme.bodyMedium?.copyWith(fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.add_rounded, color: AppColors.textSecondary, size: 20),
+                        ],
+                      ),
+                    ),
                   );
                 },
               );
             },
             loading: () => const Center(
-                child: Padding(
-              padding: EdgeInsets.all(40),
-              child: CircularProgressIndicator(),
-            )),
-            error: (err, _) => Center(
-              child: Text('CONNECTION ERROR', style: AppTheme.monoStyle(color: Colors.redAccent)),
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(AppColors.accent)),
+              ),
+            ),
+            error: (_, __) => Center(
+              child: Text('Could not load collections', style: AppTheme.darkTheme.textTheme.bodyMedium),
             ),
           ),
           const SizedBox(height: 20),

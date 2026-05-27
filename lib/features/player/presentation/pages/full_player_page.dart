@@ -116,32 +116,29 @@ class _FullPlayerPageState extends ConsumerState<FullPlayerPage>
                                       ),
                                       onPressed: () => Navigator.pop(context),
                                     ),
-                                    Column(
-                                      children: [
-                                        Text(
-                                          'PLAYING FROM',
-                                          style: AppTheme.monoStyle(
-                                            fontSize: 9,
-                                            color: AppColors.textMuted,
+                                      Column(
+                                        children: [
+                                          Text(
+                                            'PLAYING FROM',
+                                            style: AppTheme.darkTheme.textTheme.bodyMedium?.copyWith(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              letterSpacing: 1.5,
+                                              color: AppColors.textMuted,
+                                            ),
                                           ),
-                                        ),
-                                        Text(
-                                          'SILVERSYNC LIBRARY',
-                                          style: AppTheme.monoStyle(
-                                            fontSize: 11,
-                                            color: AppColors.primaryTeal,
-                                            fontWeight: FontWeight.bold,
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'SilverSync Library',
+                                            style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.textMain,
+                                            ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.more_horiz_rounded,
-                                        color: Colors.white70,
+                                        ],
                                       ),
-                                      onPressed: () {},
-                                    ),
+                                    const SizedBox(width: 48),
                                   ],
                                 ),
                               ),
@@ -162,24 +159,24 @@ class _FullPlayerPageState extends ConsumerState<FullPlayerPage>
                           child: Column(
                             children: [
                               Text(
-                                track.title,
-                                style: AppTheme.darkTheme.textTheme.displayLarge
-                                    ?.copyWith(fontSize: 24),
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                track.artist.toUpperCase(),
-                                style: AppTheme.monoStyle(
-                                  fontSize: 12,
-                                  color: AppColors.primaryTeal,
-                                  letterSpacing: 2,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
+                                        track.title,
+                                        style: AppTheme.darkTheme.textTheme.displayLarge?.copyWith(
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        track.artist,
+                                        style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(
+                                          fontSize: 16,
+                                          color: AppColors.textMuted,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),                       ],
                           ),
                         ),
 

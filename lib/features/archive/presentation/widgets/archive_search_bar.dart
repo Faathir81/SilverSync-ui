@@ -22,31 +22,31 @@ class ArchiveSearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 45,
+      height: 48,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
-        border: Border.all(color: AppColors.primaryTeal.withOpacity(0.15)),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: TextField(
         controller: controller,
         onChanged: onChanged,
-        style: AppTheme.monoStyle(fontSize: 13, color: AppColors.textMain),
+        style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(fontSize: 15),
         decoration: InputDecoration(
-          hintText: 'SEARCH_DATABASE...',
-          hintStyle: AppTheme.monoStyle(
-            fontSize: 12,
-            color: AppColors.textMuted.withOpacity(0.3),
+          hintText: 'Search Library...',
+          hintStyle: AppTheme.darkTheme.textTheme.bodyMedium?.copyWith(
+            color: AppColors.textMuted.withValues(alpha: 0.6),
           ),
           prefixIcon: Icon(
-            Icons.search,
-            size: 18,
-            color: AppColors.primaryTeal.withOpacity(0.4),
+            Icons.search_rounded,
+            size: 20,
+            color: AppColors.textMuted.withValues(alpha: 0.8),
           ),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
           suffixIcon: query.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.close, size: 16),
+                  icon: Icon(Icons.close_rounded, size: 18, color: AppColors.textMuted),
                   onPressed: onClear,
                 )
               : null,

@@ -1,111 +1,82 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import '../../../../core/constants/colors.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../constants/colors.dart';
 
-/// Reusable album art widget with automatic caching via CachedNetworkImage.
-/// - Uses [CachedNetworkImage] to cache images in disk → no re-download on scroll
-/// - Shows a glowing placeholder while loading
-/// - Gracefully falls back to a music note icon on error
+/// A consistent, rounded album art widget with gradient placeholder.
 class CachedAlbumArt extends StatelessWidget {
   final String? url;
   final double size;
   final double borderRadius;
-  final bool showGlow;
   final bool isPlaying;
+  final bool showGlow;
 
   const CachedAlbumArt({
     super.key,
-    this.url,
-    this.size = 48,
-    this.borderRadius = 4,
-    this.showGlow = false,
+    required this.url,
+    required this.size,
+    this.borderRadius = 8,
     this.isPlaying = false,
+    this.showGlow = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size.isFinite ? size : null,
-      height: size.isFinite ? size : null,
+    final Widget art = ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: (url != null && url!.isNotEmpty)
+          ? CachedNetworkImage(
+              imageUrl: url!,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => _Placeholder(size: size, radius: borderRadius),
+              errorWidget: (_, __, ___) => _Placeholder(size: size, radius: borderRadius),
+            )
+          : _Placeholder(size: size, radius: borderRadius),
+    );
+
+    if (!showGlow) return art;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(borderRadius),
-        boxShadow: showGlow
-            ? [
-                BoxShadow(
-                  color: AppColors.primaryTeal.withValues(alpha: 0.25),
-                  blurRadius: 18,
-                  spreadRadius: 2,
-                ),
-              ]
-            : null,
-        border: Border.all(
-          color: isPlaying
-              ? AppColors.primaryTeal.withValues(alpha: 0.6)
-              : AppColors.primaryTeal.withValues(alpha: 0.18),
-          width: isPlaying ? 1.5 : 1,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.accent.withValues(alpha: showGlow ? 0.35 : 0),
+            blurRadius: 18,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: art,
+    );
+  }
+}
+
+class _Placeholder extends StatelessWidget {
+  final double size;
+  final double radius;
+  const _Placeholder({required this.size, required this.radius});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2A2440), Color(0xFF1A1830)],
         ),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            _buildImage(),
-            // Playing overlay
-            if (isPlaying)
-              Container(
-                color: Colors.black.withValues(alpha: 0.5),
-                child: const Icon(
-                  Icons.graphic_eq,
-                  color: AppColors.primaryTeal,
-                  size: 22,
-                ),
-              ),
-          ],
-        ),
+      child: Icon(
+        Icons.music_note_rounded,
+        size: size * 0.4,
+        color: AppColors.textTertiary,
       ),
     );
   }
-
-  Widget _buildImage() {
-    final hasUrl = url != null && url!.isNotEmpty;
-    if (!hasUrl) return _placeholder();
-
-    return CachedNetworkImage(
-      imageUrl: url!,
-      fit: BoxFit.cover,
-      // Memory cache: only set if size is finite to avoid Infinity error
-      memCacheWidth: size.isFinite ? (size * 2).toInt() : null,
-      memCacheHeight: size.isFinite ? (size * 2).toInt() : null,
-      placeholder: (_, __) => _shimmer(),
-      errorWidget: (_, __, ___) => _placeholder(),
-    );
-  }
-
-  Widget _shimmer() => Container(
-        color: AppColors.surface,
-        child: Center(
-          child: SizedBox(
-            width: size.isFinite ? size * 0.3 : 40,
-            height: size.isFinite ? size * 0.3 : 40,
-            child: CircularProgressIndicator(
-              strokeWidth: 1.5,
-              valueColor: AlwaysStoppedAnimation(
-                AppColors.primaryTeal.withValues(alpha: 0.4),
-              ),
-            ),
-          ),
-        ),
-      );
-
-  Widget _placeholder() => Container(
-        color: AppColors.surface,
-        child: Center(
-          child: Icon(
-            Icons.music_note_rounded,
-            color: AppColors.primaryTeal.withValues(alpha: 0.25),
-            size: size.isFinite ? size * 0.45 : 80,
-          ),
-        ),
-      );
 }
