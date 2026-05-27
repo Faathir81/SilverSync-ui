@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../constants/app_constants.dart';
 import '../../features/config/presentation/providers/preference_provider.dart';
+import '../providers/notification_provider.dart';
 
 final sseServiceProvider = Provider((ref) => SseService(ref));
 
@@ -67,35 +68,7 @@ class SseService {
     final prefs = _ref.read(preferenceProvider).value;
     if (prefs == null || !prefs.notificationsEnabled) return;
 
-    Color bgColor = Colors.blueGrey;
-    IconData icon = Icons.info_outline;
-
-    if (status == 'SUCCESS') {
-      bgColor = const Color(0xFF4CAF50);
-      icon = Icons.check_circle_outline;
-    } else if (status == 'FAILED') {
-      bgColor = const Color(0xFFFF6B6B);
-      icon = Icons.error_outline;
-    } else if (status == 'DOWNLOADING' || status == 'UPLOADING') {
-      bgColor = const Color(0xFF7C6FFF);
-      icon = Icons.sync;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(icon, color: Colors.white, size: 20),
-            const SizedBox(width: 12),
-            Expanded(child: Text(message, style: const TextStyle(color: Colors.white))),
-          ],
-        ),
-        backgroundColor: bgColor,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
+    final isError = status == 'FAILED';
+    _ref.read(notificationProvider.notifier).show(message, isError: isError);
   }
 }

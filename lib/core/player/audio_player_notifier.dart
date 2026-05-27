@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
@@ -53,8 +54,18 @@ class AudioPlayerNotifier extends StateNotifier<PlayerStateModel> {
     if (value is bool) await prefs.setBool(key, value);
   }
 
-  /// Subscribes to all just_audio streams, mapping them to [PlayerStateModel].
   void _subscribeToPlayer() {
+    // Sync initial state in case of app restart while background service is running
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        state = state.copyWith(
+          position: _player.position,
+          duration: _player.duration ?? Duration.zero,
+          isPlaying: _player.playing,
+        );
+      }
+    });
+
     _subs.add(_player.positionStream.listen((pos) {
       if (mounted) state = state.copyWith(position: pos);
     }));
@@ -84,6 +95,35 @@ class AudioPlayerNotifier extends StateNotifier<PlayerStateModel> {
         state = state.copyWith(
           currentTrack: state.queue[index],
           queueIndex: index,
+        );
+      }
+    }));
+
+    // Listen to sequence state to reconstruct queue if app restarts
+    _subs.add(_player.sequenceStateStream.listen((sequenceState) {
+      if (sequenceState == null || !mounted) return;
+      final sequence = sequenceState.sequence;
+      if (sequence.isNotEmpty && state.queue.isEmpty) {
+        final newQueue = sequence.map((source) {
+          final tag = source.tag as MediaItem;
+          return TrackModel(
+            id: int.tryParse(tag.id) ?? 0,
+            title: tag.title,
+            artist: tag.artist ?? '',
+            albumArtUrl: tag.artUri?.toString() ?? '',
+            isFavorite: false,
+            spotifyId: '',
+            driveFileId: '',
+            quality: 'high',
+            createdAt: DateTime.now(),
+          );
+        }).toList();
+        
+        final idx = sequenceState.currentIndex;
+        state = state.copyWith(
+          queue: newQueue,
+          queueIndex: idx,
+          currentTrack: (idx < newQueue.length) ? newQueue[idx] : null,
         );
       }
     }));
@@ -141,7 +181,7 @@ class AudioPlayerNotifier extends StateNotifier<PlayerStateModel> {
         useLazyPreparation: true,
         children: newQueue
             .map(
-              (t) => AudioSource.uri(
+              (t) => LockCachingAudioSource(
                 Uri.parse('$_baseUrl/api/v1/tracks/${t.id}/stream'),
                 tag: MediaItem(
                   id: t.id.toString(),

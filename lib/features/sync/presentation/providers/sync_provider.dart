@@ -79,8 +79,10 @@ class SyncJobNotifier extends StateNotifier<SyncLogModel?> {
             }
           }
         }
-      } catch (_) {
-        _pollTimer?.cancel();
+      } catch (e) {
+        // Silently ignore temporary network errors during polling.
+        // The timer will continue and try again on the next tick.
+        print('Polling error ignored: $e');
       }
     });
   }

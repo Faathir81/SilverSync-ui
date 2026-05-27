@@ -97,11 +97,15 @@ class TrackOptionsSheet extends ConsumerWidget {
               isDestructive: true,
               onTap: () async {
                 Navigator.pop(context);
-                final api = ref.read(apiServiceProvider);
-                await api.deleteTrack(track.id.toString());
-                ref.read(audioPlayerProvider.notifier).removeTrackFromQueue(track.id);
-                ref.read(notificationProvider.notifier).show('Track deleted');
-                ref.invalidate(tracksProvider);
+                try {
+                  final api = ref.read(apiServiceProvider);
+                  await api.deleteTrack(track.id.toString());
+                  ref.read(audioPlayerProvider.notifier).removeTrackFromQueue(track.id);
+                  ref.read(notificationProvider.notifier).show('Track deleted');
+                  ref.invalidate(tracksProvider);
+                } catch (e) {
+                  ref.read(notificationProvider.notifier).show('Error: $e', isError: true);
+                }
               },
             ),
           ],
