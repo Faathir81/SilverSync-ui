@@ -29,6 +29,11 @@ class AppNotificationNotifier extends StateNotifier<AppNotificationState> {
       state = state.copyWith(isVisible: false);
     });
   }
+
+  void hide() {
+    _timer?.cancel();
+    state = state.copyWith(isVisible: false);
+  }
 }
 
 final notificationProvider = StateNotifierProvider<AppNotificationNotifier, AppNotificationState>((ref) {

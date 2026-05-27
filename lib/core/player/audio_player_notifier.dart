@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
@@ -110,8 +111,11 @@ class AudioPlayerNotifier extends StateNotifier<PlayerStateModel> {
             title: tag.title,
             artist: tag.artist ?? '',
             albumArtUrl: tag.artUri?.toString() ?? '',
-            duration: 0,
             isFavorite: false,
+            spotifyId: '',
+            driveFileId: '',
+            quality: 'high',
+            createdAt: DateTime.now(),
           );
         }).toList();
         

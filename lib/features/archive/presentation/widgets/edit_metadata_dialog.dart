@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/api_service.dart';
+import '../../../../core/providers/notification_provider.dart';
 import '../providers/track_provider.dart';
 import '../../data/models/track_model.dart';
 
@@ -70,15 +71,21 @@ class _EditMetadataDialogState extends ConsumerState<EditMetadataDialog> {
                 const SizedBox(width: 8),
                 ElevatedButton(
                   onPressed: () async {
-                    final api = ref.read(apiServiceProvider);
-                    await updateTrackMetadata(
-                      api,
-                      ref,
-                      widget.track.id,
-                      _titleController.text.trim(),
-                      _artistController.text.trim(),
-                    );
-                    if (mounted) Navigator.pop(context);
+                    try {
+                      final api = ref.read(apiServiceProvider);
+                      await updateTrackMetadata(
+                        api,
+                        ref,
+                        widget.track.id,
+                        _titleController.text.trim(),
+                        _artistController.text.trim(),
+                      );
+                      if (mounted) Navigator.pop(context);
+                      ref.read(notificationProvider.notifier).show('Metadata updated successfully');
+                    } catch (e) {
+                      if (mounted) Navigator.pop(context);
+                      ref.read(notificationProvider.notifier).show('Error: $e', isError: true);
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accent,

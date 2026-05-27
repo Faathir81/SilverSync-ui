@@ -46,4 +46,13 @@ class QuotaModel {
       silversyncBytes: parse(json['silversyncBytes']), // 0.0 if key missing (old backend)
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'limit': limitBytes,
+      'usage': usageBytes,
+      'usageInDrive': usageInDriveBytes,
+      'silversyncBytes': silversyncBytes,
+    };
+  }
 }
