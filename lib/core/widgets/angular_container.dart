@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
 
-class AngularClipper extends CustomClipper<Path> {
+class _AngularPainter extends CustomPainter {
   final double cutSize;
+  final bool isActive;
+  final Color fillColor;
+  final Gradient borderGradient;
 
-  AngularClipper({this.cutSize = 14.0});
+  _AngularPainter({
+    required this.cutSize,
+    required this.isActive,
+    required this.fillColor,
+    required this.borderGradient,
+  });
 
   @override
-  Path getClip(Size size) {
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
     final path = Path();
     path.moveTo(cutSize, 0);
     path.lineTo(size.width - cutSize, 0);
@@ -18,11 +27,33 @@ class AngularClipper extends CustomClipper<Path> {
     path.lineTo(0, size.height - cutSize);
     path.lineTo(0, cutSize);
     path.close();
-    return path;
+
+    // Draw shadow if active
+    if (isActive) {
+      canvas.drawShadow(path, AppColors.primaryTeal.withOpacity(0.15), 12, false);
+    }
+
+    // Fill
+    final fillPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = fillColor;
+    canvas.drawPath(path, fillPaint);
+
+    // Border
+    final borderPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0
+      ..shader = borderGradient.createShader(rect);
+    canvas.drawPath(path, borderPaint);
   }
 
   @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+  bool shouldRepaint(covariant _AngularPainter oldDelegate) {
+    return oldDelegate.isActive != isActive || 
+           oldDelegate.cutSize != cutSize ||
+           oldDelegate.fillColor != fillColor ||
+           oldDelegate.borderGradient != borderGradient;
+  }
 }
 
 class AngularContainer extends StatelessWidget {
@@ -45,38 +76,20 @@ class AngularContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        boxShadow: isActive 
-          ? [
-              BoxShadow(
-                color: AppColors.primaryTeal.withOpacity(0.15),
-                blurRadius: 12,
-                spreadRadius: 0,
-              ),
-            ]
-          : [],
+    return CustomPaint(
+      painter: _AngularPainter(
+        cutSize: cutSize,
+        isActive: isActive,
+        fillColor: isActive 
+          ? AppColors.primaryTeal.withOpacity(0.05) 
+          : const Color.fromRGBO(8, 12, 22, 0.6), // Matched from prototype
+        borderGradient: isActive ? AppColors.activeCardGradient : AppColors.cardBorderGradient,
       ),
-      child: ClipPath(
-        clipper: AngularClipper(cutSize: cutSize),
-        child: Container(
-          padding: const EdgeInsets.all(1), // Border width
-          decoration: BoxDecoration(
-            gradient: isActive ? AppColors.activeCardGradient : AppColors.cardBorderGradient,
-          ),
-          child: ClipPath(
-            clipper: AngularClipper(cutSize: cutSize - 1),
-            child: Container(
-              padding: padding,
-              color: isActive 
-                ? AppColors.primaryTeal.withOpacity(0.05) 
-                : const Color.fromRGBO(8, 12, 22, 0.6), // Matched from prototype
-              child: child,
-            ),
-          ),
-        ),
+      child: Container(
+        width: width,
+        height: height,
+        padding: padding,
+        child: child,
       ),
     );
   }

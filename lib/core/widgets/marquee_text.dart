@@ -39,7 +39,9 @@ class _MarqueeTextState extends State<MarqueeText> {
   void _checkAndScroll() async {
     if (!mounted || !_scrollController.hasClients) return;
     final maxScroll = _scrollController.position.maxScrollExtent;
-    if (maxScroll > 0) {
+    
+    // Only scroll if overflow is more than 10 pixels to avoid "spamming" small overflows
+    if (maxScroll > 10) {
       setState(() => _needsScroll = true);
       _scrollLoop();
     } else {
@@ -86,6 +88,9 @@ class _MarqueeTextState extends State<MarqueeText> {
       child: Text(
         widget.text,
         style: widget.style,
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.visible,
       ),
     );
   }

@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../../core/providers/notification_provider.dart';
-import '../../../../core/services/audio_player_service.dart';
+import '../../../../core/player/audio_player_provider.dart';
 import '../../data/models/playlist_model.dart';
 
 final playlistsProvider = FutureProvider<List<PlaylistModel>>((ref) async {

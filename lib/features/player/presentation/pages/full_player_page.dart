@@ -1,495 +1,214 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+
 import '../../../../core/constants/colors.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/services/audio_player_service.dart';
-import '../../../../core/services/api_service.dart';
-import '../../../../core/widgets/cached_album_art.dart';
-import '../../../../core/widgets/marquee_text.dart';
-import '../../../archive/presentation/providers/track_provider.dart';
+import '../../../../core/player/audio_player_provider.dart';
+import '../../../../core/widgets/ambient_background.dart';
+import '../widgets/player_controls.dart';
+import '../widgets/player_seek_bar.dart';
+import '../widgets/player_album_art.dart';
+import '../widgets/queue_info_widget.dart';
 
-class FullPlayerPage extends ConsumerWidget {
+class FullPlayerPage extends ConsumerStatefulWidget {
   const FullPlayerPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FullPlayerPage> createState() => _FullPlayerPageState();
+}
+
+class _FullPlayerPageState extends ConsumerState<FullPlayerPage>
+    with SingleTickerProviderStateMixin {
+  // Drag-to-dismiss state
+  double _dragOffset = 0.0;
+  bool _isDragging = false;
+
+  // Threshold to auto-dismiss when dragged this far down
+  static const double _dismissThreshold = 200.0;
+
+  void _onDragUpdate(DragUpdateDetails details) {
+    if (details.delta.dy > 0 || _dragOffset > 0) {
+      setState(() {
+        _dragOffset = (_dragOffset + details.delta.dy).clamp(0.0, double.infinity);
+        _isDragging = true;
+      });
+    }
+  }
+
+  void _onDragEnd(DragEndDetails details) {
+    final velocity = details.velocity.pixelsPerSecond.dy;
+    // Dismiss if dragged past threshold OR flung down fast
+    if (_dragOffset > _dismissThreshold || velocity > 800) {
+      Navigator.of(context).pop();
+    } else {
+      // Spring back
+      setState(() {
+        _dragOffset = 0.0;
+        _isDragging = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(audioPlayerProvider);
     final player = ref.read(audioPlayerProvider.notifier);
-    final track = state.currentTrack;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          // Ambient glow
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment.topCenter,
-                  radius: 1.4,
-                  colors: [
-                    AppColors.primaryTeal.withValues(alpha: 0.07),
-                    AppColors.background,
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -50, right: -50,
-            child: Container(
-              width: 300, height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [AppColors.primaryMagenta.withValues(alpha: 0.06), Colors.transparent],
-                ),
-              ),
-            ),
-          ),
+    if (state.currentTrack == null) {
+      return const Scaffold(body: Center(child: Text('NO TRACK SELECTED')));
+    }
 
-          SafeArea(
-            child: Column(
-              children: [
-                // ── Top Bar ──────────────────────────────────
-                _buildTopBar(context, ref, state, player),
+    final track = state.currentTrack!;
 
-                const SizedBox(height: 24),
+    // Opacity fades as we drag down
+    final dragProgress = (_dragOffset / _dismissThreshold).clamp(0.0, 1.0);
+    final opacity = (1.0 - dragProgress * 0.4).clamp(0.0, 1.0);
+    final scale = (1.0 - dragProgress * 0.05).clamp(0.0, 1.0);
 
-                // ── Album Art ────────────────────────────────
-                _buildAlbumArt(track),
-
-                const SizedBox(height: 28),
-
-                // ── Track Info + Shuffle/Repeat ───────────────
-                _buildTrackInfo(state, player, track),
-
-                const SizedBox(height: 24),
-
-                // ── Seek Bar ─────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 28),
-                  child: _buildSeekBar(state, player),
-                ),
-
-                const SizedBox(height: 28),
-
-                // ── Playback Controls ────────────────────────
-                _buildControls(state, player),
-
-                const SizedBox(height: 20),
-
-                // ── Queue Info ───────────────────────────────
-                _buildQueueInfo(state),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Top Bar ─────────────────────────────────────────────────────────────────
-  Widget _buildTopBar(BuildContext context, WidgetRef ref, PlayerStateModel state, AudioPlayerNotifier player) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-      child: Row(
-        children: [
-          _iconBtn(
-            Icons.keyboard_arrow_down_rounded,
-            size: 28,
-            onTap: () => Navigator.pop(context),
-          ),
-          Expanded(
-            child: Column(
-              children: [
-                Text(
-                  'NOW PLAYING',
-                  style: AppTheme.monoStyle(
-                      fontSize: 9,
-                      color: AppColors.primaryTeal.withValues(alpha: 0.5),
-                      letterSpacing: 3),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  state.currentTrack?.artist.toUpperCase() ?? '—',
-                  style: AppTheme.monoStyle(
-                      fontSize: 11,
-                      color: AppColors.textMuted.withValues(alpha: 0.7)),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          _iconBtn(
-            state.currentTrack?.isFavorite == true
-                ? Icons.favorite
-                : Icons.favorite_border,
-            color: state.currentTrack?.isFavorite == true
-                ? AppColors.primaryMagenta
-                : AppColors.textMuted.withValues(alpha: 0.4),
-            onTap: () {
-              if (state.currentTrack != null) {
-                final newValue = !state.currentTrack!.isFavorite;
-                final api = ref.read(apiServiceProvider);
-                
-                // Update immediately for responsive UI
-                player.updateCurrentTrackFavorite(newValue);
-                
-                // Fire API call and refresh archive provider
-                toggleFavorite(api, ref, state.currentTrack!.id, newValue: newValue);
-              }
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Album Art ────────────────────────────────────────────────────────────────
-  Widget _buildAlbumArt(track) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 36),
-      child: AspectRatio(
-        aspectRatio: 1,
-        child: Container(
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primaryTeal.withValues(alpha: 0.22),
-                blurRadius: 50,
-                spreadRadius: 8,
-              ),
-              BoxShadow(
-                color: AppColors.primaryMagenta.withValues(alpha: 0.07),
-                blurRadius: 70,
-                spreadRadius: 4,
-              ),
-            ],
-          ),
-          child: Hero(
-            tag: 'albumArt_${track?.id ?? "none"}',
-            child: CachedAlbumArt(
-              url: track?.albumArtUrl,
-              size: double.infinity,
-              borderRadius: 6,
-              showGlow: false, // glow handled by parent BoxDecoration
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ── Track Info + Shuffle/Repeat buttons ──────────────────────────────────────
-  Widget _buildTrackInfo(PlayerStateModel state, AudioPlayerNotifier player, track) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
-      child: Row(
-        children: [
-          // Shuffle button
-          _modeButton(
-            icon: Icons.shuffle_rounded,
-            isActive: state.shuffleEnabled,
-            onTap: () => player.toggleShuffle(),
-          ),
-
-          const SizedBox(width: 12),
-
-          // Title + artist
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                MarqueeText(
-                  text: track?.title ?? 'No Track Selected',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFFD0D8E8),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  track?.artist ?? '—',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textMuted.withOpacity(0.6),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 12),
-
-          // Repeat button
-          _modeButton(
-            icon: state.repeatMode == PlayerRepeatMode.one
-                ? Icons.repeat_one_rounded
-                : Icons.repeat_rounded,
-            isActive: state.repeatMode != PlayerRepeatMode.none,
-            onTap: () => player.cycleRepeatMode(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Seek Bar ─────────────────────────────────────────────────────────────────
-  Widget _buildSeekBar(PlayerStateModel state, AudioPlayerNotifier player) {
-    return Column(
-      children: [
-        // Seek track
-        LayoutBuilder(builder: (ctx, constraints) {
-          final progress = state.progress;
-          return GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTapDown: (d) {
-              final p = (d.localPosition.dx / constraints.maxWidth).clamp(0.0, 1.0);
-              player.seekTo(p);
-            },
-            onHorizontalDragUpdate: (d) {
-              final p = (d.localPosition.dx / constraints.maxWidth).clamp(0.0, 1.0);
-              player.seekTo(p);
-            },
-            child: SizedBox(
-              height: 28,
-              child: Stack(
-                alignment: Alignment.center,
+    return GestureDetector(
+      onVerticalDragUpdate: _onDragUpdate,
+      onVerticalDragEnd: _onDragEnd,
+      child: AnimatedContainer(
+        duration: _isDragging ? Duration.zero : const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        transform: Matrix4.translationValues(0, _dragOffset, 0),
+        child: Opacity(
+          opacity: opacity,
+          child: Transform.scale(
+            scale: scale,
+            child: Scaffold(
+              backgroundColor: Colors.transparent,
+              body: Stack(
                 children: [
-                  // Background track
-                  Container(
-                    height: 4,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryTeal.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  // Filled portion
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: FractionallySizedBox(
-                      widthFactor: progress,
-                      child: Container(
-                        height: 4,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [AppColors.primaryTeal, AppColors.primaryMagenta],
+                  const AmbientBackground(),
+
+                  SafeArea(
+                    child: Column(
+                      children: [
+                        // ── Drag Handle + Top Bar ──
+                        GestureDetector(
+                          onVerticalDragUpdate: _onDragUpdate,
+                          onVerticalDragEnd: _onDragEnd,
+                          child: Column(
+                            children: [
+                              // Drag handle (like Spotify's pill)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 12, bottom: 4),
+                                child: Container(
+                                  width: 36,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white24,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.keyboard_arrow_down_rounded,
+                                        color: Colors.white70,
+                                        size: 30,
+                                      ),
+                                      onPressed: () => Navigator.pop(context),
+                                    ),
+                                      Column(
+                                        children: [
+                                          Text(
+                                            'PLAYING FROM',
+                                            style: AppTheme.darkTheme.textTheme.bodyMedium?.copyWith(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              letterSpacing: 1.5,
+                                              color: AppColors.textMuted,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'SilverSync Library',
+                                            style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.textMain,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    const SizedBox(width: 48),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                          borderRadius: BorderRadius.circular(2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primaryTeal.withOpacity(0.6),
-                              blurRadius: 8,
-                            ),
-                          ],
                         ),
-                      ),
-                    ),
-                  ),
-                  // Draggable thumb — positioned using Stack with left offset
-                  Positioned(
-                    left: (progress * (constraints.maxWidth - 16)).clamp(0.0, double.infinity),
-                    child: Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primaryTeal.withOpacity(0.9),
-                            blurRadius: 12,
-                            spreadRadius: 2,
+
+                        const Spacer(),
+
+                        // ── Album Art ──
+                        PlayerAlbumArt(track: track, isPlaying: state.isPlaying),
+
+                        const Spacer(),
+
+                        // ── Track Info ──
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 40),
+                          child: Column(
+                            children: [
+                              Text(
+                                        track.title,
+                                        style: AppTheme.darkTheme.textTheme.displayLarge?.copyWith(
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        track.artist,
+                                        style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(
+                                          fontSize: 16,
+                                          color: AppColors.textMuted,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),                       ],
                           ),
-                        ],
-                      ),
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        // ── Seek Bar ──
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 30),
+                          child: PlayerSeekBar(state: state, player: player),
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        // ── Controls ──
+                        PlayerControls(state: state, player: player),
+
+                        const SizedBox(height: 40),
+
+                        // ── Queue Info ──
+                        QueueInfoWidget(state: state),
+
+                        const SizedBox(height: 30),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-          );
-        }),
-
-        const SizedBox(height: 6),
-
-        // Time labels
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(state.positionStr,
-                style: AppTheme.monoStyle(
-                    fontSize: 11, color: AppColors.textMuted.withOpacity(0.5))),
-            Text(state.durationStr,
-                style: AppTheme.monoStyle(
-                    fontSize: 11, color: AppColors.textMuted.withOpacity(0.5))),
-          ],
-        ),
-      ],
-    );
-  }
-
-  // ── Playback Controls ────────────────────────────────────────────────────────
-  Widget _buildControls(PlayerStateModel state, AudioPlayerNotifier player) {
-    Widget playBtn = AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: 72,
-      height: 72,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: state.isPlaying
-              ? [AppColors.primaryTeal, const Color(0xFF00B8CC)]
-              : [AppColors.primaryTeal.withValues(alpha: 0.8), AppColors.primaryTeal.withValues(alpha: 0.5)],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryTeal.withValues(alpha: state.isPlaying ? 0.55 : 0.25),
-            blurRadius: state.isPlaying ? 28 : 16,
-            spreadRadius: state.isPlaying ? 4 : 1,
-          ),
-        ],
-      ),
-      child: state.isLoading
-          ? const Padding(
-              padding: EdgeInsets.all(22),
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                valueColor: AlwaysStoppedAnimation(Colors.black),
-              ),
-            )
-          : Icon(
-              state.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-              size: 38,
-              color: AppColors.background,
-            ),
-    );
-
-    if (state.isPlaying) {
-      playBtn = playBtn.animate(onPlay: (c) => c.repeat(reverse: true))
-          .scale(begin: const Offset(1, 1), end: const Offset(1.05, 1.05), duration: 1.2.seconds, curve: Curves.easeInOut);
-    }
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // Skip Previous
-        _controlBtn(
-          icon: Icons.skip_previous_rounded,
-          size: 30,
-          onTap: () => player.skipPrevious(),
-        ),
-
-        const SizedBox(width: 20),
-
-        // Play / Pause — large glowing circle
-        GestureDetector(
-          onTap: () => player.togglePlayPause(),
-          child: playBtn,
-        ),
-
-        const SizedBox(width: 20),
-
-        // Skip Next
-        _controlBtn(
-          icon: Icons.skip_next_rounded,
-          size: 30,
-          onTap: () => player.skipNext(),
-        ),
-      ],
-    );
-  }
-
-  // ── Queue Info ───────────────────────────────────────────────────────────────
-  Widget _buildQueueInfo(PlayerStateModel state) {
-    if (state.queue.isEmpty) return const SizedBox.shrink();
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.queue_music_rounded, size: 12, color: AppColors.textMuted.withOpacity(0.35)),
-        const SizedBox(width: 6),
-        Text(
-          '${state.queueIndex + 1} of ${state.queue.length}',
-          style: AppTheme.monoStyle(fontSize: 10, color: AppColors.textMuted.withOpacity(0.35)),
-        ),
-        if (state.shuffleEnabled) ...[
-          const SizedBox(width: 8),
-          Text('• SHUFFLE',
-              style: AppTheme.monoStyle(fontSize: 10, color: AppColors.primaryTeal.withOpacity(0.5))),
-        ],
-        if (state.repeatMode != PlayerRepeatMode.none) ...[
-          const SizedBox(width: 8),
-          Text(
-            '• ${state.repeatMode == PlayerRepeatMode.one ? 'REPEAT 1' : 'REPEAT ALL'}',
-            style: AppTheme.monoStyle(fontSize: 10, color: AppColors.primaryMagenta.withOpacity(0.6)),
-          ),
-        ],
-      ],
-    );
-  }
-
-
-  Widget _controlBtn({required IconData icon, required double size, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 54,
-        height: 54,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: AppColors.primaryTeal.withOpacity(0.07),
-          border: Border.all(color: AppColors.primaryTeal.withOpacity(0.18)),
-        ),
-        child: Icon(icon, size: size, color: Colors.white.withOpacity(0.85)),
-      ),
-    );
-  }
-
-  Widget _modeButton({required IconData icon, required bool isActive, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isActive ? AppColors.primaryTeal.withOpacity(0.15) : Colors.transparent,
-          border: Border.all(
-            color: isActive ? AppColors.primaryTeal.withOpacity(0.5) : AppColors.textMuted.withOpacity(0.2),
           ),
         ),
-        child: Icon(
-          icon,
-          size: 18,
-          color: isActive ? AppColors.primaryTeal : AppColors.textMuted.withOpacity(0.4),
-        ),
       ),
     );
   }
 
-  Widget _iconBtn(IconData icon, {required VoidCallback onTap, Color? color, double size = 22}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        alignment: Alignment.center,
-        child: Icon(icon,
-            size: size,
-            color: color ?? AppColors.textMuted.withOpacity(0.55)),
-      ),
-    );
-  }
 }
