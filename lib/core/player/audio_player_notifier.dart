@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:audio_session/audio_session.dart';
 
 import '../../features/archive/data/models/track_model.dart';
 import '../constants/app_constants.dart';
@@ -30,11 +31,17 @@ class AudioPlayerNotifier extends StateNotifier<PlayerStateModel> {
   static const String _baseUrl = AppConstants.baseUrl;
 
   AudioPlayerNotifier() : super(const PlayerStateModel()) {
+    _initAudioSession();
     _loadPreferences();
     _subscribeToPlayer();
   }
 
   // ── Initialisation ─────────────────────────────────────────────────────────
+
+  Future<void> _initAudioSession() async {
+    final session = await AudioSession.instance;
+    await session.configure(const AudioSessionConfiguration.music());
+  }
 
   Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
@@ -45,6 +52,19 @@ class AudioPlayerNotifier extends StateNotifier<PlayerStateModel> {
         repeatMode: PlayerRepeatMode.values[repeatIdx],
         shuffleEnabled: shuffle,
       );
+      
+      // Sync initial loop mode with just_audio
+      switch (state.repeatMode) {
+        case PlayerRepeatMode.none:
+          _player.setLoopMode(LoopMode.off);
+          break;
+        case PlayerRepeatMode.one:
+          _player.setLoopMode(LoopMode.one);
+          break;
+        case PlayerRepeatMode.all:
+          _player.setLoopMode(LoopMode.all);
+          break;
+      }
     }
   }
 
@@ -83,11 +103,6 @@ class AudioPlayerNotifier extends StateNotifier<PlayerStateModel> {
       final loading =
           ps == ProcessingState.loading || ps == ProcessingState.buffering;
       state = state.copyWith(isLoading: loading);
-
-      // Auto-advance to next track when current one finishes
-      if (ps == ProcessingState.completed) {
-        _handleTrackCompletion();
-      }
     }));
 
     _subs.add(_player.currentIndexStream.listen((index) {
@@ -127,25 +142,6 @@ class AudioPlayerNotifier extends StateNotifier<PlayerStateModel> {
         );
       }
     }));
-  }
-
-  /// Called when the player reaches the end of the playlist.
-  void _handleTrackCompletion() {
-    switch (state.repeatMode) {
-      case PlayerRepeatMode.one:
-        _player.seek(Duration.zero);
-        _player.play();
-        break;
-      case PlayerRepeatMode.all:
-        if (state.queue.isNotEmpty) {
-          _player.seek(Duration.zero, index: 0);
-          _player.play();
-        }
-        break;
-      case PlayerRepeatMode.none:
-        // Stay paused at the end
-        break;
-    }
   }
 
   // ── Public API ────────────────────────────────────────────────────────────

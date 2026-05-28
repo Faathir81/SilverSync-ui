@@ -13,7 +13,8 @@ Future<void> main() async {
     await JustAudioBackground.init(
       androidNotificationChannelId: 'com.ryanheise.audioservice.AudioService',
       androidNotificationChannelName: 'Audio Playback',
-      androidNotificationOngoing: true,
+      androidNotificationOngoing: false,
+      androidStopForegroundOnPause: true,
     );
   }
 
