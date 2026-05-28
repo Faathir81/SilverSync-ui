@@ -5,7 +5,7 @@ import '../constants/colors.dart';
 import '../theme/app_theme.dart';
 import '../player/audio_player_provider.dart';
 import 'cached_album_art.dart';
-import 'marquee_text.dart';
+import 'smart_marquee.dart';
 import '../../features/player/presentation/pages/full_player_page.dart';
 
 class MiniPlayerWidget extends ConsumerWidget {
@@ -95,12 +95,14 @@ class MiniPlayerWidget extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              MarqueeText(
+                              SmartMarquee(
                                 text: state.currentTrack?.title ?? '',
                                 style: AppTheme.darkTheme.textTheme.bodyLarge?.copyWith(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ) ?? const TextStyle(),
+                                isActive: state.isPlaying,
+                                height: 20,
                               ),
                               const SizedBox(height: 2),
                               Text(
