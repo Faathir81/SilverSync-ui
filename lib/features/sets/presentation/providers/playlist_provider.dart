@@ -53,3 +53,16 @@ Future<void> removeTrackFromPlaylist(ApiService api, WidgetRef ref, int playlist
   ref.invalidate(playlistsProvider);
   ref.invalidate(playlistDetailProvider(playlistId));
 }
+
+Future<void> updatePlaylistMetadata(ApiService api, WidgetRef ref, int playlistId, String newName) async {
+  await api.updatePlaylist(playlistId.toString(), newName);
+  ref.read(notificationProvider.notifier).show('COLLECTION RENAMED');
+  ref.invalidate(playlistsProvider);
+  ref.invalidate(playlistDetailProvider(playlistId));
+}
+
+Future<void> deletePlaylistById(ApiService api, WidgetRef ref, int playlistId) async {
+  await api.deletePlaylist(playlistId.toString());
+  ref.read(notificationProvider.notifier).show('COLLECTION DELETED');
+  ref.invalidate(playlistsProvider);
+}

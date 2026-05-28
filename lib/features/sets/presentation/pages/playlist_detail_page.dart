@@ -84,6 +84,13 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                 icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textMain, size: 20),
                 onPressed: () => Navigator.pop(context),
               ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.more_vert_rounded, color: AppColors.textMain),
+                  onPressed: () => _showPlaylistOptions(context, ref, playlist),
+                ),
+                const SizedBox(width: 8),
+              ],
               flexibleSpace: FlexibleSpaceBar(
                 background: Stack(
                   children: [
@@ -266,6 +273,109 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
             const SizedBox(height: 16),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showPlaylistOptions(BuildContext context, WidgetRef ref, playlist) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.edit_rounded, color: AppColors.textMain),
+              title: Text('Rename Collection', style: AppTheme.monoStyle(fontSize: 14, color: AppColors.textMain)),
+              onTap: () {
+                Navigator.pop(context);
+                _showRenameDialog(context, ref, playlist);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+              title: Text('Delete Collection', style: AppTheme.monoStyle(fontSize: 14, color: Colors.redAccent)),
+              onTap: () {
+                Navigator.pop(context);
+                _showDeleteConfirmation(context, ref, playlist);
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRenameDialog(BuildContext context, WidgetRef ref, playlist) {
+    final controller = TextEditingController(text: playlist.name);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surfaceHigh,
+        title: Text('Rename Collection', style: AppTheme.darkTheme.textTheme.bodyLarge),
+        content: TextField(
+          controller: controller,
+          style: const TextStyle(color: AppColors.textMain),
+          decoration: const InputDecoration(
+            hintText: 'Collection Name',
+            hintStyle: TextStyle(color: AppColors.textMuted),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.surfaceBorder)),
+            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primaryTeal)),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL', style: TextStyle(color: AppColors.textMuted)),
+          ),
+          TextButton(
+            onPressed: () async {
+              final newName = controller.text.trim();
+              if (newName.isNotEmpty && newName != playlist.name) {
+                final api = ref.read(apiServiceProvider);
+                await updatePlaylistMetadata(api, ref, playlist.id, newName);
+              }
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text('SAVE', style: TextStyle(color: AppColors.primaryTeal)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context, WidgetRef ref, playlist) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surfaceHigh,
+        title: Text('Delete Collection?', style: AppTheme.darkTheme.textTheme.bodyLarge),
+        content: Text(
+          'Are you sure you want to delete "${playlist.name}"? This action cannot be undone.',
+          style: AppTheme.darkTheme.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL', style: TextStyle(color: AppColors.textMuted)),
+          ),
+          TextButton(
+            onPressed: () async {
+              final api = ref.read(apiServiceProvider);
+              await deletePlaylistById(api, ref, playlist.id);
+              if (context.mounted) {
+                Navigator.pop(context); // close dialog
+                Navigator.pop(context); // close detail page, go back to collections list
+              }
+            },
+            child: const Text('DELETE', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
       ),
     );
   }

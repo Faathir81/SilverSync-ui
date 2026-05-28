@@ -71,6 +71,10 @@ class ApiService {
       _dio.get('/api/v1/playlists/$id');
   Future<Response> createPlaylist(String name) =>
       _dio.post('/api/v1/playlists', data: {'name': name});
+  Future<Response> updatePlaylist(String id, String name) =>
+      _dio.patch('/api/v1/playlists/$id', data: {'name': name});
+  Future<Response> deletePlaylist(String id) =>
+      _dio.delete('/api/v1/playlists/$id');
   Future<Response> addTrackToPlaylist(String playlistId, String trackId) =>
       _dio.post('/api/v1/playlists/$playlistId/tracks/$trackId');
   Future<Response> removeTrackFromPlaylist(String playlistId, String trackId) =>

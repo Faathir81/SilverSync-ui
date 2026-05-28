@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:marquee/marquee.dart';
 
 /// A widget that automatically scrolls text horizontally if it overflows its container.
-/// Provides a premium "marquee" effect for long track titles.
-class MarqueeText extends StatefulWidget {
+/// Uses the standard marquee package for an infinite looping effect.
+class MarqueeText extends StatelessWidget {
   final String text;
   final TextStyle style;
 
@@ -13,85 +14,42 @@ class MarqueeText extends StatefulWidget {
   });
 
   @override
-  State<MarqueeText> createState() => _MarqueeTextState();
-}
-
-class _MarqueeTextState extends State<MarqueeText> {
-  late ScrollController _scrollController;
-  bool _needsScroll = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController = ScrollController();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkAndScroll());
-  }
-
-  @override
-  void didUpdateWidget(MarqueeText oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.text != widget.text) {
-      _scrollController.jumpTo(0);
-      WidgetsBinding.instance.addPostFrameCallback((_) => _checkAndScroll());
-    }
-  }
-
-  void _checkAndScroll() async {
-    if (!mounted || !_scrollController.hasClients) return;
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    
-    // Only scroll if overflow is more than 10 pixels to avoid "spamming" small overflows
-    if (maxScroll > 10) {
-      setState(() => _needsScroll = true);
-      _scrollLoop();
-    } else {
-      setState(() => _needsScroll = false);
-    }
-  }
-
-  void _scrollLoop() async {
-    if (!mounted || !_needsScroll || !_scrollController.hasClients) return;
-
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted || !_needsScroll || !_scrollController.hasClients) return;
-
-    final maxScroll = _scrollController.position.maxScrollExtent;
-
-    await _scrollController.animateTo(
-      maxScroll,
-      // 30ms per pixel for smooth consistent speed
-      duration: Duration(milliseconds: (maxScroll * 30).toInt()),
-      curve: Curves.linear,
-    );
-
-    if (!mounted) return;
-    await Future.delayed(const Duration(seconds: 1));
-    if (!mounted) return;
-
-    _scrollController.jumpTo(0);
-    _scrollLoop();
-  }
-
-  @override
-  void dispose() {
-    _needsScroll = false;
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      controller: _scrollController,
-      scrollDirection: Axis.horizontal,
-      physics: const NeverScrollableScrollPhysics(),
-      child: Text(
-        widget.text,
-        style: widget.style,
-        maxLines: 1,
-        softWrap: false,
-        overflow: TextOverflow.visible,
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Measure the text width
+        final textPainter = TextPainter(
+          text: TextSpan(text: text, style: style),
+          maxLines: 1,
+          textDirection: TextDirection.ltr,
+        )..layout(minWidth: 0, maxWidth: double.infinity);
+
+        // If the text is wider than the available space, use Marquee
+        if (textPainter.size.width > constraints.maxWidth) {
+          return Marquee(
+            text: text,
+            style: style,
+            scrollAxis: Axis.horizontal,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            blankSpace: 60.0,
+            velocity: 35.0,
+            pauseAfterRound: const Duration(seconds: 1),
+            startPadding: 0.0,
+            accelerationDuration: const Duration(milliseconds: 500),
+            accelerationCurve: Curves.easeIn,
+            decelerationDuration: const Duration(milliseconds: 500),
+            decelerationCurve: Curves.easeOut,
+          );
+        } else {
+          // If it fits, just display a static Text widget
+          return Text(
+            text,
+            style: style,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          );
+        }
+      },
     );
   }
 }
